@@ -1,24 +1,23 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomiclabs/hardhat-etherscan");
+require("@openzeppelin/hardhat-upgrades");
 require("hardhat-contract-sizer");
+require("solidity-coverage");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 
 module.exports = {
-  defaultNetwork: "hardhat",
+  defaultNetwork: "goerli",
   solidity: {
     compilers: [
       {
         version: "0.8.9",
-      },
-      {
-        version: "0.5.0",
-      },
-      {
-        version: "0.4.0",
-      },
-      {
-        version: "0.6.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
       },
     ],
   },
@@ -27,24 +26,21 @@ module.exports = {
     hardhat: {
       forking: {
         enabled: true,
-        url: "https://mainnet.infura.io/v3/cedb60965aa445678c19340ea4652b90",
+        url: "https://mainnet.infura.io/v3/API_KEY",
         gas: "auto",
         blockNumber: 15702656,
       },
       allowUnlimitedContractSize: true,
     },
     goerli: {
-      url: "https://goerli.infura.io/v3/cedb60965aa445678c19340ea4652b90",
-      accounts: [
-        "96a98021efea06da2d53c837c0f8347d4d3748eae250d039cb4db8bc45a303ae",
-      ],
-      allowUnlimitedContractSize: true,
+      url: "https://goerli.infura.io/v3/API_KEY",
+      accounts: ["PRIVATE_KEY"],
     },
   },
   etherscan: {
-    apiKey: "PSP855PDPWQV76H2WAMWSRAV4KMDDRNT9W",
+    apiKey: "API_KEY",
   },
   mocha: {
-    timeout: 1000000000,
+    timeout: 1e12,
   },
 };

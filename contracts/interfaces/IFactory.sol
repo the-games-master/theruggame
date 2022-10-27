@@ -2,11 +2,11 @@
 pragma solidity ^0.8.9;
 
 interface IFactory {
-    function winner() external view returns (address);
+    function cult() external view returns (address);
 
-    function gameTokens(uint256 index) external view returns (address);
+    function dCult() external view returns (address);
 
-    function tokenLength() external view returns (uint256);
+    function trg() external view returns (address);
 
-    function rugLooser(address token) external;
+    function winnerTotalRewards(address winner) external view returns (uint256);
 }

@@ -2,18 +2,14 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IUniswap.sol";
-import "hardhat/console.sol";
 
-contract Liquidity is Ownable {
-    address public constant FACTORY =
+library Liquidity {
+    address internal constant FACTORY =
         0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address public constant ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
-    // event Log(string message, uint256 val);
+    address internal constant ROUTER =
+        0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     function addLiquidity(
         address _tokenA,
@@ -41,12 +37,6 @@ contract Liquidity is Ownable {
             _to,
             block.timestamp
         );
-        console.log("finished", amountA, amountB, liquidity);
-
-        // emit Log("amountA", amountA);
-        // emit Log("amountB", amountB);
-        // emit Log("liquidity", liquidity);
-        // console.log("liquidity added msg.sender", msg.sender);
     }
 
     function removeLiquidity(
@@ -66,11 +56,8 @@ contract Liquidity is Ownable {
             0,
             0,
             _to,
-            1e12
+            block.timestamp
         );
-
-        // emit Log("amountA", amountA);
-        // emit Log("amountB", amountB);
     }
 
     function swap(
@@ -80,7 +67,6 @@ contract Liquidity is Ownable {
         uint256 _amountOutMin,
         address _to
     ) internal returns (uint256) {
-        IERC20(_tokenIn).approve(ROUTER, _amountIn);
         IERC20(_tokenIn).approve(ROUTER, _amountIn);
 
         address[] memory path;
@@ -102,11 +88,10 @@ contract Liquidity is Ownable {
                 _amountOutMin,
                 path,
                 _to,
-                1e12
+                block.timestamp
             );
         uint256 balanceAfter = IERC20(_tokenOut).balanceOf(_to);
         uint256 swappedAmount = balanceAfter - balanceBefore;
-        console.log("finished", ERC20(_tokenOut).name(), swappedAmount, _to);
         return swappedAmount;
     }
 

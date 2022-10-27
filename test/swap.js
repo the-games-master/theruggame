@@ -1,6 +1,6 @@
 // const { constants } = require("@openzeppelin/test-helpers");
 // const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("Factory", () => {
@@ -11,6 +11,7 @@ describe("Factory", () => {
     const wethHolderAddress = "0x8EB8a3b98659Cce290402893d0123abb75E3ab28";
     const cultHolderAddress = "0x0d9B1e53CBb251572D982d9F96520E8D40d22bb0";
     const cultAddress = "0xf0f9D895aCa5c8678f706FB8216fa22957685A13";
+    const dCultAddress = "0x2d77B594B9BBaED03221F7c63Af8C4307432daF1";
     const wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
     const uniswapRouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
     const uniswapFactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
@@ -30,7 +31,7 @@ describe("Factory", () => {
     const TRG = await ethers.getContractFactory("TheRugGame");
     const trg = await TRG.deploy();
     await trg.deployed();
-    console.log("trg", trg.address);
+    console.log("trg", trg.address, await trg.name());
 
     const weth = await ethers.getContractAt("ERC20", wethAddress);
     console.log("weth", weth.address);
@@ -60,13 +61,13 @@ describe("Factory", () => {
       uniswapFactoryAddress
     );
 
-    await trg.approve(routerU.address, 1e10);
-    await weth.approve(routerU.address, 1e10);
+    await trg.approve(routerU.address, ethers.utils.parseEther("1"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("1"));
     await routerU.addLiquidity(
       trg.address,
       weth.address,
-      1e8,
-      1e8,
+      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("1"),
       0,
       0,
       owner.address,
@@ -74,22 +75,33 @@ describe("Factory", () => {
     );
 
     const Factory = await ethers.getContractFactory("Factory");
-    const factory = await Factory.deploy(cult.address, trg.address);
+    const factory = await upgrades.deployProxy(
+      Factory,
+      [trg.address, cult.address, dCultAddress],
+      { initializer: "initialize", kind: "uups" }
+    );
     await factory.deployed();
     console.log("factory address", factory.address);
 
-    const Winner = await ethers.getContractFactory("Winner");
-    const winner = await Winner.deploy(factory.address);
-    await winner.deployed();
-    console.log("winner address", winner.address);
-
-    await factory.setWinner(winner.address);
-
-    await weth.transfer(factory.address, 1e10);
-    await factory.createToken("T", "T", 1, 18, 1e8, 1e8);
-    await factory.createToken("H", "H", 1, 18, 1e8, 1e8);
-    await factory.createToken("E", "E", 1, 18, 1e8, 1e8);
-    await winner.updateWinnerList();
+    await weth.transfer(factory.address, ethers.utils.parseEther("0.03"));
+    await factory.createToken(
+      "T",
+      "T",
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("0.01")
+    );
+    await factory.createToken(
+      "H",
+      "H",
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("0.01")
+    );
+    await factory.createToken(
+      "E",
+      "E",
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("0.01")
+    );
     console.log("factory balance", await weth.balanceOf(factory.address));
 
     const newTokenTAddress = await factory.gameTokens(0);
@@ -113,15 +125,20 @@ describe("Factory", () => {
     );
     console.log("newTokenE", newTokenE.address);
 
-    console.log("\n\nT Token-------------------------------------");
-    const pathWT = [weth.address, newTokenTAddress];
-    await weth.approve(routerU.address, 1e10);
+    console.log("\n\n\nT Token-------------------------------------");
+    const pathWT = [weth.address, newTokenT.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
     console.log(
       "T token balance before",
-      await newTokenT.balanceOf(owner.address)
+      await newTokenT.balanceOf(owner.address),
+      await newTokenT.balanceOf(newTokenT.address)
+    );
+    console.log(
+      "amount out pathWT",
+      await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWT)
     );
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      1e4,
+      ethers.utils.parseEther("0.001"),
       0,
       pathWT,
       owner.address,
@@ -130,14 +147,19 @@ describe("Factory", () => {
     console.log("T token balance", await newTokenT.balanceOf(owner.address));
 
     console.log("\n\nT Token-------------------------------------");
-    const pathTW = [newTokenTAddress, weth.address];
-    await newTokenT.approve(routerU.address, 1e10);
+    const pathTW = [newTokenT.address, weth.address];
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("500"));
     console.log(
       "weth token balance before",
-      await weth.balanceOf(owner.address)
+      await weth.balanceOf(owner.address),
+      await newTokenT.balanceOf(newTokenT.address)
+    );
+    console.log(
+      "amount out pathTW",
+      await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathTW)
     );
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      5000,
+      ethers.utils.parseEther("500"),
       0,
       pathTW,
       owner.address,
@@ -155,14 +177,16 @@ describe("Factory", () => {
     );
 
     console.log("\n\n\nH Token-------------------------------------");
-    const pathWH = [weth.address, newTokenHAddress];
+    const pathWH = [weth.address, newTokenH.address];
     await weth.approve(routerU.address, 1e10);
     console.log(
       "H token balance before",
-      await newTokenH.balanceOf(owner.address)
+      await newTokenH.balanceOf(owner.address),
+      await newTokenH.balanceOf(newTokenH.address)
     );
+    console.log("amount out pathWH", await routerU.getAmountsOut(4000, pathWH));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      1e4,
+      4000,
       0,
       pathWH,
       owner.address,
@@ -171,14 +195,22 @@ describe("Factory", () => {
     console.log("H token balance", await newTokenH.balanceOf(owner.address));
 
     console.log("\n\nH Token-------------------------------------");
-    const pathHW = [newTokenHAddress, weth.address];
-    await newTokenH.approve(routerU.address, 1e10);
+    const pathHW = [newTokenH.address, weth.address];
+    await newTokenH.approve(
+      routerU.address,
+      newTokenH.balanceOf(owner.address)
+    );
     console.log(
       "weth token balance before",
-      await weth.balanceOf(owner.address)
+      await weth.balanceOf(owner.address),
+      await newTokenH.balanceOf(newTokenH.address)
+    );
+    console.log(
+      "amount out pathHW",
+      await routerU.getAmountsOut(newTokenH.balanceOf(owner.address), pathHW)
     );
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      4000,
+      newTokenH.balanceOf(owner.address),
       0,
       pathHW,
       owner.address,
@@ -196,14 +228,16 @@ describe("Factory", () => {
     );
 
     console.log("\n\n\nE Token-------------------------------------");
-    const pathWE = [weth.address, newTokenEAddress];
+    const pathWE = [weth.address, newTokenE.address];
     await weth.approve(routerU.address, 1e10);
     console.log(
       "E token balance before",
-      await newTokenE.balanceOf(owner.address)
+      await newTokenE.balanceOf(owner.address),
+      await newTokenE.balanceOf(newTokenE.address)
     );
+    console.log("amount out pathWE", await routerU.getAmountsOut(3000, pathWE));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      1e4,
+      3000,
       0,
       pathWE,
       owner.address,
@@ -212,14 +246,22 @@ describe("Factory", () => {
     console.log("E token balance", await newTokenE.balanceOf(owner.address));
 
     console.log("\n\nE Token-------------------------------------");
-    const pathEW = [newTokenEAddress, weth.address];
-    await newTokenE.approve(routerU.address, 1e10);
+    const pathEW = [newTokenE.address, weth.address];
+    await newTokenE.approve(
+      routerU.address,
+      newTokenE.balanceOf(owner.address)
+    );
     console.log(
       "weth token balance before",
-      await weth.balanceOf(owner.address)
+      await weth.balanceOf(owner.address),
+      await newTokenE.balanceOf(newTokenE.address)
+    );
+    console.log(
+      "amount out pathEW",
+      await routerU.getAmountsOut(newTokenE.balanceOf(owner.address), pathEW)
     );
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      2000,
+      newTokenE.balanceOf(owner.address),
       0,
       pathEW,
       owner.address,
@@ -236,60 +278,116 @@ describe("Factory", () => {
       await newTokenE.points()
     );
 
+    console.log("\n\n\nBribe-------------------------------------");
+    console.log("newTokenT");
+    console.log(
+      "points and balance before bribe",
+      await newTokenT.points(),
+      await cult.balanceOf(owner.address)
+    );
+    await cult.approve(newTokenT.address, ethers.utils.parseEther("1"));
+    await newTokenT.bribe(cult.address, ethers.utils.parseEther("1"));
+    console.log("points after bribe", await newTokenT.points());
+
+    console.log("\n\nnewTokenH");
+    console.log(
+      "points and balance before bribe",
+      await newTokenH.points(),
+      await trg.balanceOf(owner.address)
+    );
+    await trg.approve(newTokenH.address, ethers.utils.parseEther("1"));
+    await newTokenH.bribe(trg.address, ethers.utils.parseEther("1"));
+    console.log("points after bribe", await newTokenH.points());
+
     console.log("\n\n\nWinner-------------------------------------");
+    console.log("get winner", await factory.getWinner());
+    console.log("get loser", await factory.getLoser());
+
+    await factory.distributeRewardsAndRugLoser();
+
     console.log(
-      "before rug bal newTokenH",
-      await newTokenH.balanceOf(factory.address)
+      "reward logic JS",
+      await weth.balanceOf(newTokenT.address),
+      await newTokenT.balanceOf(owner.address),
+      await newTokenT.totalSupply(),
+      ((await weth.balanceOf(newTokenT.address)) *
+        (await newTokenT.balanceOf(owner.address))) /
+        (await newTokenT.totalSupply())
     );
-    console.log("before rug bal weth", await weth.balanceOf(factory.address));
-    console.log("get winner", await winner.getWinner());
-    console.log("get looser", await winner.getLooser());
 
-    await winner.distributeRewardsAndRugLooser();
+    const userReward = await newTokenT.pendingRewards(owner.address);
+    console.log("user reward is", userReward);
+
+    await newTokenT.claimReward();
+
+    const userRewardAfter = await newTokenT.pendingRewards(owner.address);
+    console.log("user reward after claim is", userRewardAfter);
+
+    console.log("\n\n\nWinner2-------------------------------------");
+    console.log("owner bal before", await weth.balanceOf(owner.address));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("100"),
+      0,
+      pathTW,
+      owner.address,
+      1e12
+    );
+    console.log("owner bal after", await weth.balanceOf(owner.address));
+    console.log("get winner", await factory.getWinner());
+    console.log("get loser", await factory.getLoser());
+
+    await factory.distributeRewardsAndRugLoser();
+
     console.log(
-      "after rug bal newTokenH",
-      await newTokenH.balanceOf(factory.address)
+      "reward logic JS",
+      await weth.balanceOf(newTokenT.address),
+      await newTokenT.balanceOf(owner.address),
+      await newTokenT.totalSupply(),
+      ((await weth.balanceOf(newTokenT.address)) *
+        (await newTokenT.balanceOf(owner.address))) /
+        (await newTokenT.totalSupply())
     );
-    console.log("after rug bal weth", await weth.balanceOf(factory.address));
 
-    // console.log(
-    //   "balance final buy",
-    //   await newTokenT.balanceOf(owner.address),
-    //   await weth.balanceOf(owner.address)
-    // );
+    const userReward2 = await newTokenT.pendingRewards(owner.address);
+    console.log("user reward is", userReward2);
 
-    // console.log(
-    //   "balance before sell",
-    //   await newTokenT.balanceOf(owner.address),
-    //   await weth.balanceOf(owner.address)
-    // );
-    // await newTokenT.approve(newTokenT.address, 1e12);
-    // await newTokenT.sellToken(9000);
+    await newTokenT.claimReward();
 
-    // console.log(
-    //   "balance after sell",
-    //   await newTokenT.balanceOf(owner.address),
-    //   await weth.balanceOf(owner.address)
-    // );
+    const userRewardAfter2 = await newTokenT.pendingRewards(owner.address);
+    console.log("user reward after claim is", userRewardAfter2);
 
-    // await newTokenT._buyToken(owner.address, 99);
+    console.log("\n\n\nWinner3-------------------------------------");
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("100"),
+      0,
+      pathTW,
+      owner.address,
+      1e12
+    );
 
-    // console.log("starting sell");
-    // const path2 = [newTokenTAddress, weth.address];
-    // await newTokenT.approve(routerU.address, 1e10);
-    // await newTokenT.transfer(newTokenT.address, 1010);
-    // console.log(
-    //   "new weth bal",
-    //   await newTokenT.balanceOf(owner.address),
-    //   await newTokenT.balanceOf(pairAddress),
-    //   await weth.balanceOf(pairAddress),
-    //   await pair.getReserves()
-    // );
-    // const a = await routerU.getAmountsOut(1e3, path2);
-    // console.log("a is a", a);
-    // await routerU.swapExactTokensForTokens(1e3, 0, path2, owner.address, 1e12);
+    console.log("get winner", await factory.getWinner());
+    console.log("get loser", await factory.getLoser());
 
-    // console.log("bal", await newTokenT.balanceOf(owner.address));
-    // console.log("bal", await weth.balanceOf(owner.address));
+    await factory.distributeRewardsAndRugLoser();
+
+    console.log(
+      "reward logic JS",
+      await weth.balanceOf(newTokenT.address),
+      await newTokenT.balanceOf(owner.address),
+      await newTokenT.totalSupply(),
+      ((await weth.balanceOf(newTokenT.address)) *
+        (await newTokenT.balanceOf(owner.address))) /
+        (await newTokenT.totalSupply())
+    );
+
+    const userReward3 = await newTokenT.pendingRewards(owner.address);
+    console.log("user reward is", userReward3);
+
+    await newTokenT.claimReward();
+
+    const userRewardAfter3 = await newTokenT.pendingRewards(owner.address);
+    console.log("user reward after claim is", userRewardAfter3);
   });
 });

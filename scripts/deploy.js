@@ -7,26 +7,22 @@
 const hre = require("hardhat");
 
 async function main() {
-  const Liquidity = await hre.ethers.getContractFactory("Liquidity");
-  const liquidity = await Liquidity.deploy();
+  const dCultAddress = "0x2d77B594B9BBaED03221F7c63Af8C4307432daF1";
+  const cultAddress = "0xf0f9D895aCa5c8678f706FB8216fa22957685A13";
 
-  const Cult = await hre.ethers.getContractFactory("Cult");
-  const cult = await Cult.deploy();
+  const TRG = await ethers.getContractFactory("TheRugGame");
+  const trg = await TRG.deploy();
+  await trg.deployed();
+  console.log("trg", trg.address);
 
-  const Trg = await hre.ethers.getContractFactory("TRG");
-  const trg = await Trg.deploy();
-
-  const Factory = await hre.ethers.getContractFactory("Factory");
-  const factory = await Factory.deploy(
-    liquidity.address,
-    cult.address,
-    trg.address
+  const Factory = await ethers.getContractFactory("Factory");
+  const factory = await upgrades.deployProxy(
+    Factory,
+    [trg.address, cultAddress, dCultAddress],
+    { initializer: "initialize", kind: "uups" }
   );
-
-  console.log(`Liquidity ${liquidity.address}\n
-  Factory ${factory.address}\n
-  Cult ${cult.address}\n
-  TRG ${trg.address}\n`);
+  await factory.deployed();
+  console.log("factory address", factory.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
