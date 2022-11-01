@@ -13,6 +13,7 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     address public dCult;
     uint256 public gameStartTime;
     uint256 public eliminationTime;
+    uint256 public tokenMultiplier;
 
     uint256 _winnerTotalRewards;
     mapping(address => uint256) public winnerTotalRewards;
@@ -48,6 +49,7 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         cult = _cult;
         dCult = _dCult;
         eliminationTime = 30 days;
+        tokenMultiplier = 100000;
     }
 
     function createToken(
@@ -117,6 +119,10 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             }
         }
         point = point == type(uint256).max ? 0 : point;
+    }
+
+    function getEliminationCount() external view returns (uint256 count) {
+        count = eliminatedTokens.length;
     }
 
     function distributeRewardsAndRugLoser() external onlyOwner {

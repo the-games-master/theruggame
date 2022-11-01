@@ -318,6 +318,16 @@ describe("Factory", () => {
     const userReward = await newTokenT.pendingRewards(owner.address);
     console.log("user reward is", userReward);
 
+    const deadReward = await newTokenT.pendingRewards(
+      "0x000000000000000000000000000000000000dEaD"
+    );
+    console.log("dead reward is", deadReward);
+
+    const pairReward = await newTokenT.pendingRewards(
+      await factoryU.getPair(newTokenT.address, weth.address)
+    );
+    console.log("pair reward is", pairReward);
+
     await newTokenT.claimReward();
 
     const userRewardAfter = await newTokenT.pendingRewards(owner.address);
