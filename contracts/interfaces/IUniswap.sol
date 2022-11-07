@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity =0.8.9;
 
 interface IUniswapV2Router {
     function addLiquidity(
@@ -19,6 +19,11 @@ interface IUniswapV2Router {
             uint256 liquidity
         );
 
+    function getAmountsOut(uint256 amountIn, address[] memory path)
+        external
+        view
+        returns (uint256[] memory amounts);
+
     function removeLiquidity(
         address tokenA,
         address tokenB,
@@ -36,11 +41,6 @@ interface IUniswapV2Router {
         address to,
         uint256 deadline
     ) external;
-
-    function getAmountsOut(uint256 amountIn, address[] memory path)
-        external
-        view
-        returns (uint256[] memory amounts);
 }
 
 interface IUniswapV2Factory {

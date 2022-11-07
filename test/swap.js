@@ -1,11 +1,8 @@
-// const { constants } = require("@openzeppelin/test-helpers");
-// const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("Factory", () => {
   it("Should initialize with right parameters", async () => {
-    const [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
+    const [owner] = await ethers.getSigners();
     console.log("owner", owner.address);
 
     const wethHolderAddress = "0x8EB8a3b98659Cce290402893d0123abb75E3ab28";
@@ -77,7 +74,7 @@ describe("Factory", () => {
     const Factory = await ethers.getContractFactory("Factory");
     const factory = await upgrades.deployProxy(
       Factory,
-      [trg.address, cult.address, dCultAddress],
+      [trg.address, cult.address, dCultAddress, 100, 200, 100, 0],
       { initializer: "initialize", kind: "uups" }
     );
     await factory.deployed();
@@ -303,20 +300,16 @@ describe("Factory", () => {
     console.log("get winner", await factory.getWinner());
     console.log("get loser", await factory.getLoser());
 
+    await network.provider.send("evm_increaseTime", [30 * 86400]);
+    await network.provider.send("evm_mine");
     await factory.distributeRewardsAndRugLoser();
 
-    console.log(
-      "reward logic JS",
-      await weth.balanceOf(newTokenT.address),
-      await newTokenT.balanceOf(owner.address),
-      await newTokenT.totalSupply(),
-      ((await weth.balanceOf(newTokenT.address)) *
-        (await newTokenT.balanceOf(owner.address))) /
-        (await newTokenT.totalSupply())
-    );
-
     const userReward = await newTokenT.pendingRewards(owner.address);
-    console.log("user reward is", userReward);
+    console.log(
+      "user reward is",
+      userReward,
+      await newTokenT.balanceOf(owner.address)
+    );
 
     const deadReward = await newTokenT.pendingRewards(
       "0x000000000000000000000000000000000000dEaD"
@@ -347,20 +340,16 @@ describe("Factory", () => {
     console.log("get winner", await factory.getWinner());
     console.log("get loser", await factory.getLoser());
 
+    await network.provider.send("evm_increaseTime", [30 * 86400]);
+    await network.provider.send("evm_mine");
     await factory.distributeRewardsAndRugLoser();
 
-    console.log(
-      "reward logic JS",
-      await weth.balanceOf(newTokenT.address),
-      await newTokenT.balanceOf(owner.address),
-      await newTokenT.totalSupply(),
-      ((await weth.balanceOf(newTokenT.address)) *
-        (await newTokenT.balanceOf(owner.address))) /
-        (await newTokenT.totalSupply())
-    );
-
     const userReward2 = await newTokenT.pendingRewards(owner.address);
-    console.log("user reward is", userReward2);
+    console.log(
+      "user reward is",
+      userReward2,
+      await newTokenT.balanceOf(owner.address)
+    );
 
     await newTokenT.claimReward();
 
@@ -380,20 +369,16 @@ describe("Factory", () => {
     console.log("get winner", await factory.getWinner());
     console.log("get loser", await factory.getLoser());
 
+    await network.provider.send("evm_increaseTime", [30 * 86400]);
+    await network.provider.send("evm_mine");
     await factory.distributeRewardsAndRugLoser();
 
-    console.log(
-      "reward logic JS",
-      await weth.balanceOf(newTokenT.address),
-      await newTokenT.balanceOf(owner.address),
-      await newTokenT.totalSupply(),
-      ((await weth.balanceOf(newTokenT.address)) *
-        (await newTokenT.balanceOf(owner.address))) /
-        (await newTokenT.totalSupply())
-    );
-
     const userReward3 = await newTokenT.pendingRewards(owner.address);
-    console.log("user reward is", userReward3);
+    console.log(
+      "user reward is",
+      userReward3,
+      await newTokenT.balanceOf(owner.address)
+    );
 
     await newTokenT.claimReward();
 

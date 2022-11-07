@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity =0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -8,36 +8,53 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../contracts/tokens/THERUGGAME.sol";
 
 contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-    address public trg;
+    uint256 private _winnerTotalRewards;
+    uint256 public constant MAX_TAX = 400;
+    uint256 public burnTax;
+    uint256 public cultTax;
+    uint256 public eliminationTime;
+    uint256 public gameStartTime;
+    uint256 public rewardTax;
+    uint256 public tokenMultiplier;
+    uint256 public trgTax;
     address public cult;
     address public dCult;
-    uint256 public gameStartTime;
-    uint256 public eliminationTime;
-    uint256 public tokenMultiplier;
+    address public trg;
 
-    uint256 _winnerTotalRewards;
     mapping(address => uint256) public winnerTotalRewards;
+    mapping(address => uint256) public dividendPerToken;
 
     address[] public gameTokens;
     address[] public activeTokens;
     address[] public eliminatedTokens;
 
     error InvalidAddress();
-    error InvalidTime();
     error InvalidIndex();
-    error TooEarly(uint256 eliminationTime);
+    error InvalidTax();
+    error InvalidTime();
     error NotEnoughRewards();
+    error TooEarly(uint256 eliminationTime);
 
-    event TokenCreated(address token);
-    event TrgUpdated(address updatedTrg);
     event CultUpdated(address updatedCult);
     event DCultUpdated(address updatedDCult);
     event EliminationTimeUpdated(uint256 updatedTime);
+    event TaxesUpdated(
+        uint256 burnTax,
+        uint256 cultTax,
+        uint256 rewardTax,
+        uint256 trgTax
+    );
+    event TokenCreated(address token);
+    event TrgUpdated(address updatedTrg);
 
     function initialize(
         address _trg,
         address _cult,
-        address _dCult
+        address _dCult,
+        uint256 _burnTax,
+        uint256 _cultTax,
+        uint256 _rewardTax,
+        uint256 _trgTax
     ) public initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -45,9 +62,16 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if (_trg == address(0) || _cult == address(0) || _dCult == address(0))
             revert InvalidAddress();
 
+        if (_burnTax + _cultTax + _rewardTax + _trgTax > MAX_TAX)
+            revert InvalidTax();
+
         trg = _trg;
         cult = _cult;
         dCult = _dCult;
+        burnTax = _burnTax;
+        cultTax = _cultTax;
+        rewardTax = _rewardTax;
+        trgTax = _trgTax;
         eliminationTime = 30 days;
         tokenMultiplier = 100000;
     }
@@ -77,6 +101,18 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit TokenCreated(_token);
     }
 
+    function _getPoints(address _token) private view returns (uint256 points) {
+        return THERUGGAME(_token).points();
+    }
+
+    function _getWethReward(address _token)
+        private
+        view
+        returns (uint256 points)
+    {
+        return THERUGGAME(_token).wethReward();
+    }
+
     function getWinner()
         public
         view
@@ -87,13 +123,13 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         )
     {
         for (uint256 i = 0; i < activeTokens.length; i++) {
-            if (activeTokens[i] != address(0)) {
-                uint256 tokenPoints = THERUGGAME(activeTokens[i]).points();
-                if (tokenPoints >= point) {
-                    point = tokenPoints;
-                    winnerToken = activeTokens[i];
-                    index = i;
-                }
+            if (
+                activeTokens[i] != address(0) &&
+                _getPoints(activeTokens[i]) >= point
+            ) {
+                point = _getPoints(activeTokens[i]);
+                winnerToken = activeTokens[i];
+                index = i;
             }
         }
     }
@@ -109,35 +145,25 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     {
         point = type(uint256).max;
         for (uint256 i = 0; i < activeTokens.length; i++) {
-            if (activeTokens[i] != address(0)) {
-                uint256 tokenPoints = THERUGGAME(activeTokens[i]).points();
-                if (tokenPoints <= point) {
-                    point = tokenPoints;
-                    loserToken = activeTokens[i];
-                    index = i;
-                }
+            if (
+                activeTokens[i] != address(0) &&
+                _getPoints(activeTokens[i]) <= point
+            ) {
+                point = _getPoints(activeTokens[i]);
+                loserToken = activeTokens[i];
+                index = i;
             }
         }
         point = point == type(uint256).max ? 0 : point;
     }
 
-    function getEliminationCount() external view returns (uint256 count) {
-        count = eliminatedTokens.length;
-    }
-
     function distributeRewardsAndRugLoser() external onlyOwner {
-        if (
-            block.timestamp <
-            (gameStartTime + eliminationTime) * (eliminatedTokens.length + 1)
-        )
-            revert TooEarly(
-                (gameStartTime + eliminationTime) *
-                    (eliminatedTokens.length + 1)
-            );
+        uint256 validTime = gameStartTime +
+            (eliminationTime * (eliminatedTokens.length + 1));
+        if (block.timestamp < validTime) revert TooEarly(validTime);
 
         (address winnerToken, , ) = getWinner();
         (address loserToken, , ) = getLoser();
-
         if (winnerToken == address(0) || loserToken == address(0))
             revert InvalidAddress();
 
@@ -150,7 +176,7 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 totalReward;
         for (uint256 i = 0; i < gameTokens.length; i++) {
-            totalReward += THERUGGAME(gameTokens[i]).wethReward();
+            totalReward += _getWethReward(gameTokens[i]);
         }
 
         uint256 totalActiveReward = totalReward - _winnerTotalRewards;
@@ -161,8 +187,18 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             winnerToken,
             totalActiveReward
         );
+
+        address pair = Liquidity.getPair(winnerToken, Liquidity.WETH);
+        uint256 validSupply = IERC20(winnerToken).totalSupply() -
+            (IERC20(winnerToken).balanceOf(pair) +
+                IERC20(winnerToken).balanceOf(Liquidity.DEAD_ADDRESS) +
+                IERC20(winnerToken).balanceOf(winnerToken));
+
         _winnerTotalRewards += totalActiveReward;
         winnerTotalRewards[winnerToken] += totalActiveReward;
+        dividendPerToken[winnerToken] +=
+            (totalActiveReward * 1e18) /
+            validSupply;
     }
 
     function _rugLoser() private {
@@ -186,13 +222,6 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         IERC20Upgradeable(trg).transfer(trg, swappedTrg);
     }
 
-    function changeTrg(address _trg) external onlyOwner {
-        if (_trg == address(0) || _trg == trg) revert InvalidAddress();
-        trg = _trg;
-
-        emit TrgUpdated(_trg);
-    }
-
     function changeCult(address _cult) external onlyOwner {
         if (_cult == address(0) || _cult == cult) revert InvalidAddress();
         cult = _cult;
@@ -207,8 +236,31 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit DCultUpdated(_dCult);
     }
 
+    function changeTrg(address _trg) external onlyOwner {
+        if (_trg == address(0) || _trg == trg) revert InvalidAddress();
+        trg = _trg;
+
+        emit TrgUpdated(_trg);
+    }
+
+    function changeTaxes(
+        uint256 _burnTax,
+        uint256 _cultTax,
+        uint256 _rewardTax,
+        uint256 _trgTax
+    ) external onlyOwner {
+        if (_burnTax + _cultTax + _rewardTax + _trgTax > MAX_TAX)
+            revert InvalidTax();
+        burnTax = _burnTax;
+        cultTax = _cultTax;
+        rewardTax = _rewardTax;
+        trgTax = _trgTax;
+
+        emit TaxesUpdated(_burnTax, _cultTax, _rewardTax, _trgTax);
+    }
+
     function changeEliminationTime(uint256 _time) external onlyOwner {
-        if (eliminationTime == _time) revert InvalidTime();
+        if (_time == eliminationTime) revert InvalidTime();
         eliminationTime = _time;
 
         emit EliminationTimeUpdated(_time);

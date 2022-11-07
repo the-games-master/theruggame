@@ -7,30 +7,39 @@
 const hre = require("hardhat");
 
 async function main() {
+  // Goerli Testnet, change required in Liquidity.sol
   // const wethAddress = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6";
   const dCultAddress = "0x2d77B594B9BBaED03221F7c63Af8C4307432daF1";
-  const trgAddress = "0x2aadfd053FbDB0b180D161eD2Ece36d34b6BC4aA";
-  const cultAddress = "0x5710D2aa9f77956E31Fb8D9683A1498A14600887";
-  const gas = await hre.ethers.provider.getGasPrice();
 
-  // const Cult = await hre.ethers.getContractFactory("MockToken");
-  // const cult = await Cult.deploy("Cult", "cult");
-  // await cult.deployed();
-  // console.log("cult", cult.address);
+  const Cult = await hre.ethers.getContractFactory("MockToken");
+  const cult = await Cult.deploy("Cult", "cult");
+  await cult.deployed();
+  console.log("cult", cult.address);
 
-  // const TRG = await ethers.getContractFactory("TheRugGame");
-  // const trg = await TRG.deploy();
-  // await trg.deployed();
-  // console.log("trg", trg.address);
+  const TRG = await ethers.getContractFactory("TheRugGame");
+  const trg = await TRG.deploy();
+  await trg.deployed();
+  console.log("trg", trg.address);
 
-  console.log("gas", gas);
-  const Factory = await hre.ethers.getContractFactory("Factory");
-  const factory = await Factory.deploy(trgAddress, cultAddress, dCultAddress);
+  const Factory = await ethers.getContractFactory("Factory");
+  const factory = await upgrades.deployProxy(
+    Factory,
+    [
+      trg.address,
+      cultAddress,
+      dCultAddress,
+      taxBurn,
+      taxCult,
+      taxReward,
+      taxTrg,
+    ],
+    { initializer: "initialize", kind: "uups" }
+  );
   await factory.deployed();
   console.log("factory address", factory.address);
 
   // const upgraded = await hre.upgrades.upgradeProxy(
-  //   "0x6BB3536DF6BA1D9711e2CDd3aE8b058eC01f07F3",
+  //   "PROXY_ADDRESS",
   //   Factory
   // );
   // console.log("upgraded", upgraded.address);

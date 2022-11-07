@@ -9,6 +9,10 @@ const hre = require("hardhat");
 async function main() {
   const dCultAddress = "0x2d77B594B9BBaED03221F7c63Af8C4307432daF1";
   const cultAddress = "0xf0f9D895aCa5c8678f706FB8216fa22957685A13";
+  const taxBurn = 100;
+  const taxCult = 100;
+  const taxReward = 100;
+  const taxTrg = 100;
 
   const TRG = await ethers.getContractFactory("TheRugGame");
   const trg = await TRG.deploy();
@@ -18,7 +22,15 @@ async function main() {
   const Factory = await ethers.getContractFactory("Factory");
   const factory = await upgrades.deployProxy(
     Factory,
-    [trg.address, cultAddress, dCultAddress],
+    [
+      trg.address,
+      cultAddress,
+      dCultAddress,
+      taxBurn,
+      taxCult,
+      taxReward,
+      taxTrg,
+    ],
     { initializer: "initialize", kind: "uups" }
   );
   await factory.deployed();
