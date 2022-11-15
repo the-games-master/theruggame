@@ -10,53 +10,81 @@ describe("TRG", () => {
     await trg.deployed();
     console.log("trg", trg.address);
 
-    await trg.approve(trg.address, 100);
-    await trg.deposit(100);
+    const STRG = await ethers.getContractFactory("STRG");
+    const strg = await STRG.deploy(trg.address);
+    await strg.deployed();
+    console.log("sTrg", strg.address);
 
-    await trg.transfer(trg.address, 200);
+    await trg.setsTrg(strg.address);
+    await trg.approve(strg.address, 200);
+    await strg.deposit(100);
+
+    await trg.transfer(strg.address, 200);
     console.log(
       "pending reward total 200",
-      await trg.pendingRewards(owner.address)
+      await strg.pendingRewards(owner.address)
     );
 
-    await trg.claimReward();
-    console.log("userInfo after claim", await trg.userInfo(owner.address));
+    await strg.claimReward();
+    console.log("owner info after claim", await strg.userInfo(owner.address));
 
     await trg.transfer(addr1.address, 1000);
-    await trg.connect(addr1).approve(trg.address, 100);
-    await trg.connect(addr1).deposit(100);
-    await trg.transfer(trg.address, 100);
+    await trg.connect(addr1).approve(strg.address, 100);
+    await strg.connect(addr1).deposit(100);
+    await trg.transfer(strg.address, 100);
     console.log(
       "pending reward total 100, owner and addr1",
-      await trg.pendingRewards(owner.address),
-      await trg.pendingRewards(addr1.address)
+      await strg.pendingRewards(owner.address),
+      await strg.pendingRewards(addr1.address)
     );
 
-    await trg.withdraw(10);
-    console.log("userInfo after withdraw", await trg.userInfo(owner.address));
-
-    await trg.withdraw(10);
+    await strg.withdraw(10);
     console.log(
-      "userInfo after withdraw again",
-      await trg.userInfo(owner.address)
+      "owner info after withdraw",
+      await strg.userInfo(owner.address)
     );
 
-    await trg.transfer(trg.address, 180);
+    await strg.withdraw(10);
+    console.log(
+      "owner info after withdraw again",
+      await strg.userInfo(owner.address)
+    );
+
+    await trg.transfer(strg.address, 180);
     console.log(
       "pending reward total 180, owner and addr1",
-      await trg.pendingRewards(owner.address),
-      await trg.pendingRewards(addr1.address)
+      await strg.pendingRewards(owner.address),
+      await strg.pendingRewards(addr1.address)
     );
 
-    await trg.emergencyWithdraw();
+    await strg.emergencyWithdraw();
     console.log(
-      "userInfo after emergency withdraw",
-      await trg.userInfo(owner.address)
+      "owner info after emergency withdraw",
+      await strg.userInfo(owner.address)
     );
     console.log(
       "pending reward owner and addr1",
-      await trg.pendingRewards(owner.address),
-      await trg.pendingRewards(addr1.address)
+      await strg.pendingRewards(owner.address),
+      await strg.pendingRewards(addr1.address)
+    );
+
+    await strg.deposit(100);
+    await trg.transfer(strg.address, 100);
+    console.log(
+      "pending reward total 100, owner and addr1",
+      await strg.pendingRewards(owner.address),
+      await strg.pendingRewards(addr1.address)
+    );
+
+    await strg.connect(addr1).emergencyWithdraw();
+    console.log(
+      "addr1 info after emergency withdraw",
+      await strg.userInfo(addr1.address)
+    );
+    console.log(
+      "pending reward owner and addr1",
+      await strg.pendingRewards(owner.address),
+      await strg.pendingRewards(addr1.address)
     );
   });
 });

@@ -10,10 +10,6 @@ interface IFactory {
 
     function dividendPerToken(address) external view returns (uint256);
 
-    function eliminationTime() external view returns (uint256);
-
-    function gameStartTime() external view returns (uint256);
-
     function burnTax() external view returns (uint256);
 
     function cultTax() external view returns (uint256);
@@ -21,6 +17,4 @@ interface IFactory {
     function rewardTax() external view returns (uint256);
 
     function trgTax() external view returns (uint256);
-
-    function tokenMultiplier() external view returns (uint256);
 }

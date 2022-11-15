@@ -1,39 +1,57 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFV2WrapperInterface.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../contracts/tokens/THERUGGAME.sol";
 
-contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract Factory is
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    AutomationCompatibleInterface
+{
+    uint256 private _gameEndTime;
     uint256 private _winnerTotalRewards;
     uint256 public constant MAX_TAX = 400;
+    uint16 public requestConfirmations;
+    uint32 public callbackGasLimit;
+    uint32 public numWords;
     uint256 public burnTax;
     uint256 public cultTax;
-    uint256 public eliminationTime;
     uint256 public gameStartTime;
+    address public linkAddress;
     uint256 public rewardTax;
-    uint256 public tokenMultiplier;
     uint256 public trgTax;
     address public cult;
     address public dCult;
     address public trg;
+    address public wrapperAddress;
+
+    LinkTokenInterface private LINK;
+    VRFV2WrapperInterface private VRF_V2_WRAPPER;
 
     mapping(address => uint256) public winnerTotalRewards;
     mapping(address => uint256) public dividendPerToken;
 
+    uint256[] private _rugDays;
     address[] public gameTokens;
     address[] public activeTokens;
     address[] public eliminatedTokens;
 
     error InvalidAddress();
+    error InvalidEliminationDay();
     error InvalidIndex();
     error InvalidTax();
     error InvalidTime();
+    error InvalidWrapperVRF();
     error NotEnoughRewards();
-    error TooEarly(uint256 eliminationTime);
+    error TooEarly();
 
     event CultUpdated(address updatedCult);
     event DCultUpdated(address updatedDCult);
@@ -72,8 +90,15 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         cultTax = _cultTax;
         rewardTax = _rewardTax;
         trgTax = _trgTax;
-        eliminationTime = 30 days;
-        tokenMultiplier = 100000;
+
+        callbackGasLimit = 300000;
+        requestConfirmations = 3;
+        numWords = 10;
+        linkAddress = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
+        wrapperAddress = 0x5A861794B927983406fCE1D062e00b9368d97Df6;
+
+        LINK = LinkTokenInterface(linkAddress);
+        VRF_V2_WRAPPER = VRFV2WrapperInterface(wrapperAddress);
     }
 
     function createToken(
@@ -157,10 +182,13 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         point = point == type(uint256).max ? 0 : point;
     }
 
-    function distributeRewardsAndRugLoser() external onlyOwner {
+    function distributeRewardsAndRugLoser() private {
+        if (_rugDays.length == 0 || _rugDays[eliminatedTokens.length] == 0)
+            revert InvalidEliminationDay();
+
         uint256 validTime = gameStartTime +
-            (eliminationTime * (eliminatedTokens.length + 1));
-        if (block.timestamp < validTime) revert TooEarly(validTime);
+            (_rugDays[eliminatedTokens.length] * 1 days);
+        if (block.timestamp < validTime) revert TooEarly();
 
         (address winnerToken, , ) = getWinner();
         (address loserToken, , ) = getLoser();
@@ -259,13 +287,6 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit TaxesUpdated(_burnTax, _cultTax, _rewardTax, _trgTax);
     }
 
-    function changeEliminationTime(uint256 _time) external onlyOwner {
-        if (_time == eliminationTime) revert InvalidTime();
-        eliminationTime = _time;
-
-        emit EliminationTimeUpdated(_time);
-    }
-
     function emergencyRemoveToken(uint256 _index) external onlyOwner {
         if (activeTokens[_index] == address(0)) revert InvalidIndex();
         delete activeTokens[_index];
@@ -284,4 +305,90 @@ contract Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         override
         onlyOwner
     {}
+
+    // chainlink
+    function updateVrfConfiguration(
+        uint32 _callbackGasLimit,
+        uint16 _requestConfirmations,
+        uint32 _numWords,
+        address _linkAddress,
+        address _wrapperAddress
+    ) external onlyOwner {
+        callbackGasLimit = _callbackGasLimit;
+        requestConfirmations = _requestConfirmations;
+        numWords = _numWords;
+        linkAddress = _linkAddress;
+        wrapperAddress = _wrapperAddress;
+    }
+
+    function requestRandomness(
+        uint32 _callbackGasLimit,
+        uint16 _requestConfirmations,
+        uint32 _numWords
+    ) internal returns (uint256 requestId) {
+        LINK.transferAndCall(
+            address(VRF_V2_WRAPPER),
+            VRF_V2_WRAPPER.calculateRequestPrice(_callbackGasLimit),
+            abi.encode(_callbackGasLimit, _requestConfirmations, _numWords)
+        );
+        return VRF_V2_WRAPPER.lastRequestId();
+    }
+
+    function requestRugDays() external onlyOwner {
+        requestRandomness(callbackGasLimit, requestConfirmations, numWords);
+    }
+
+    function fulfillRandomWords(
+        uint256, /* _requestId */
+        uint256[] memory _randomWords
+    ) internal {
+        for (uint8 i = 0; i < numWords; i++) {
+            uint256 day = (_randomWords[i] % 30) + 31;
+            _rugDays.push(day);
+            _gameEndTime += day;
+        }
+    }
+
+    function rawFulfillRandomWords(
+        uint256 _requestId,
+        uint256[] memory _randomWords
+    ) external {
+        if (msg.sender != address(VRF_V2_WRAPPER)) revert InvalidWrapperVRF();
+        fulfillRandomWords(_requestId, _randomWords);
+    }
+
+    function withdrawLink() public onlyOwner {
+        require(LINK.transfer(msg.sender, LINK.balanceOf(address(this))));
+    }
+
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    )
+        external
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory performData)
+    {
+        performData = "";
+        if (
+            _rugDays.length == 0 ||
+            _rugDays[eliminatedTokens.length] == 0 ||
+            _gameEndTime == 0
+        ) {
+            upkeepNeeded = false;
+        } else if (block.timestamp > _gameEndTime) {
+            upkeepNeeded = false;
+        } else {
+            uint256 validTime = gameStartTime +
+                (_rugDays[eliminatedTokens.length] * 1 days);
+
+            upkeepNeeded = block.timestamp >= validTime;
+        }
+    }
+
+    function performUpkeep(
+        bytes calldata /* performData */
+    ) external override {
+        distributeRewardsAndRugLoser();
+    }
 }

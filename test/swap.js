@@ -300,9 +300,9 @@ describe("Factory", () => {
     console.log("get winner", await factory.getWinner());
     console.log("get loser", await factory.getLoser());
 
-    await network.provider.send("evm_increaseTime", [30 * 86400]);
-    await network.provider.send("evm_mine");
-    await factory.distributeRewardsAndRugLoser();
+    // await network.provider.send("evm_increaseTime", [30 * 86400]);
+    // await network.provider.send("evm_mine");
+    // await factory.performUpkeep(0x00);
 
     const userReward = await newTokenT.pendingRewards(owner.address);
     console.log(
@@ -321,7 +321,7 @@ describe("Factory", () => {
     );
     console.log("pair reward is", pairReward);
 
-    await newTokenT.claimReward();
+    // await newTokenT.claimReward();
 
     const userRewardAfter = await newTokenT.pendingRewards(owner.address);
     console.log("user reward after claim is", userRewardAfter);
@@ -340,9 +340,9 @@ describe("Factory", () => {
     console.log("get winner", await factory.getWinner());
     console.log("get loser", await factory.getLoser());
 
-    await network.provider.send("evm_increaseTime", [30 * 86400]);
-    await network.provider.send("evm_mine");
-    await factory.distributeRewardsAndRugLoser();
+    // await network.provider.send("evm_increaseTime", [30 * 86400]);
+    // await network.provider.send("evm_mine");
+    // await factory.performUpkeep();
 
     const userReward2 = await newTokenT.pendingRewards(owner.address);
     console.log(
@@ -351,7 +351,7 @@ describe("Factory", () => {
       await newTokenT.balanceOf(owner.address)
     );
 
-    await newTokenT.claimReward();
+    // await newTokenT.claimReward();
 
     const userRewardAfter2 = await newTokenT.pendingRewards(owner.address);
     console.log("user reward after claim is", userRewardAfter2);
@@ -369,9 +369,9 @@ describe("Factory", () => {
     console.log("get winner", await factory.getWinner());
     console.log("get loser", await factory.getLoser());
 
-    await network.provider.send("evm_increaseTime", [30 * 86400]);
-    await network.provider.send("evm_mine");
-    await factory.distributeRewardsAndRugLoser();
+    // await network.provider.send("evm_increaseTime", [30 * 86400]);
+    // await network.provider.send("evm_mine");
+    // await factory.performUpkeep();
 
     const userReward3 = await newTokenT.pendingRewards(owner.address);
     console.log(
@@ -380,7 +380,7 @@ describe("Factory", () => {
       await newTokenT.balanceOf(owner.address)
     );
 
-    await newTokenT.claimReward();
+    // await newTokenT.claimReward();
 
     const userRewardAfter3 = await newTokenT.pendingRewards(owner.address);
     console.log("user reward after claim is", userRewardAfter3);
