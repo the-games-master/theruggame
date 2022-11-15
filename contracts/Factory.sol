@@ -186,8 +186,7 @@ contract Factory is
         if (_rugDays.length == 0 || _rugDays[eliminatedTokens.length] == 0)
             revert InvalidEliminationDay();
 
-        uint256 validTime = gameStartTime +
-            (_rugDays[eliminatedTokens.length] * 1 days);
+        uint256 validTime = gameStartTime + (_rugDays[eliminatedTokens.length]);
         if (block.timestamp < validTime) revert TooEarly();
 
         (address winnerToken, , ) = getWinner();
@@ -343,7 +342,7 @@ contract Factory is
         uint256[] memory _randomWords
     ) internal {
         for (uint8 i = 0; i < numWords; i++) {
-            uint256 day = (_randomWords[i] % 30) + 31;
+            uint256 day = ((_randomWords[i] % 30) + 31) * 1 days;
             _rugDays.push(day);
             _gameEndTime += day;
         }
@@ -380,7 +379,7 @@ contract Factory is
             upkeepNeeded = false;
         } else {
             uint256 validTime = gameStartTime +
-                (_rugDays[eliminatedTokens.length] * 1 days);
+                (_rugDays[eliminatedTokens.length]);
 
             upkeepNeeded = block.timestamp >= validTime;
         }
