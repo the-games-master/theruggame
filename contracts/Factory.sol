@@ -250,21 +250,21 @@ contract Factory is
     }
 
     function changeCult(address _cult) external onlyOwner {
-        if (_cult == address(0) || _cult == cult) revert InvalidAddress();
+        if (_cult == address(0)) revert InvalidAddress();
         cult = _cult;
 
         emit CultUpdated(_cult);
     }
 
     function changeDCult(address _dCult) external onlyOwner {
-        if (_dCult == address(0) || _dCult == dCult) revert InvalidAddress();
+        if (_dCult == address(0)) revert InvalidAddress();
         dCult = _dCult;
 
         emit DCultUpdated(_dCult);
     }
 
     function changeTrg(address _trg) external onlyOwner {
-        if (_trg == address(0) || _trg == trg) revert InvalidAddress();
+        if (_trg == address(0)) revert InvalidAddress();
         trg = _trg;
 
         emit TrgUpdated(_trg);
@@ -313,11 +313,17 @@ contract Factory is
         address _linkAddress,
         address _wrapperAddress
     ) external onlyOwner {
+        if (_linkAddress == address(0) || _wrapperAddress == address(0))
+            revert InvalidAddress();
+
         callbackGasLimit = _callbackGasLimit;
         requestConfirmations = _requestConfirmations;
         numWords = _numWords;
         linkAddress = _linkAddress;
         wrapperAddress = _wrapperAddress;
+
+        LINK = LinkTokenInterface(linkAddress);
+        VRF_V2_WRAPPER = VRFV2WrapperInterface(wrapperAddress);
     }
 
     function requestRandomness(

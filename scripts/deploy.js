@@ -19,6 +19,11 @@ async function main() {
   await trg.deployed();
   console.log("trg", trg.address);
 
+  const sTRG = await ethers.getContractFactory("sTRG");
+  const strg = await sTRG.deploy(trg.address);
+  await strg.deployed();
+  console.log("strg", strg.address);
+
   const Factory = await ethers.getContractFactory("Factory");
   const factory = await upgrades.deployProxy(
     Factory,

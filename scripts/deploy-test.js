@@ -7,7 +7,6 @@
 const hre = require("hardhat");
 
 async function main() {
-  // Goerli Testnet, change required in Liquidity.sol
   const dCultAddress = "0x2d77B594B9BBaED03221F7c63Af8C4307432daF1";
 
   const Cult = await hre.ethers.getContractFactory("MockToken");
@@ -19,6 +18,11 @@ async function main() {
   const trg = await TRG.deploy();
   await trg.deployed();
   console.log("trg", trg.address);
+
+  const sTRG = await ethers.getContractFactory("sTRG");
+  const strg = await sTRG.deploy(trg.address);
+  await strg.deployed();
+  console.log("strg", strg.address);
 
   const Factory = await ethers.getContractFactory("Factory");
   const factory = await upgrades.deployProxy(

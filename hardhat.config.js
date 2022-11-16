@@ -7,7 +7,7 @@ require("solidity-coverage");
 /** @type import('hardhat/config').HardhatUserConfig */
 
 module.exports = {
-  defaultNetwork: "goerli",
+  defaultNetwork: "hardhat",
   solidity: {
     compilers: [
       {
@@ -15,7 +15,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 1,
           },
         },
       },
@@ -36,11 +36,15 @@ module.exports = {
       url: "https://goerli.infura.io/v3/API_KEY",
       accounts: ["PRIVATE_KEY"],
     },
+    mainnet: {
+      url: "https://goerli.infura.io/v3/API_KEY",
+      accounts: ["PRIVATE_KEY"],
+    },
   },
   etherscan: {
     apiKey: "API_KEY",
   },
   mocha: {
-    timeout: 1e12,
+    timeout: 1e14,
   },
 };
