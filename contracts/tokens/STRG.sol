@@ -23,6 +23,7 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
     error NotEnoughBalance();
     error NotEnoughDeposit();
     error NotEnoughRewards();
+    error NonTransferableToken();
 
     event Deposit(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
@@ -133,6 +134,10 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
         address to,
         uint256 amount
     ) internal override whenNotPaused {
-        super._beforeTokenTransfer(from, to, amount);
+        if (from == address(0) || to == address(0)) {
+            super._beforeTokenTransfer(from, to, amount);
+        } else {
+            revert NonTransferableToken();
+        }
     }
 }

@@ -14,12 +14,12 @@ contract TheRugGame is ERC20, Pausable, Ownable, ERC20Permit, ERC20Votes {
 
     error InvalidAddress();
 
-    constructor() ERC20("TheRugGame", "TRG") ERC20Permit("TheRugGame") {
+    constructor() ERC20("The Rug Game", "TRG") ERC20Permit("The Rug Game") {
         _mint(msg.sender, 6666666666666 ether);
     }
 
-    function setsTrg(address _sTrg) external {
-        if (_sTrg == address(0) || _sTrg == sTrg) revert InvalidAddress();
+    function setsTrg(address _sTrg) external onlyOwner {
+        if (_sTrg == address(0)) revert InvalidAddress();
         sTrg = _sTrg;
     }
 
