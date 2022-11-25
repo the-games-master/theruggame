@@ -1,5 +1,5 @@
 // // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity =0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -63,7 +63,7 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
     {
         UserInfo storage user = userInfo[_user];
 
-        if (user.amount <= 0) return 0;
+        if (user.amount == 0) return 0;
         reward =
             ((dividendPerToken() - _xDividendPerToken[_user]) * user.amount) /
             1e18;
@@ -73,7 +73,7 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
         UserInfo storage user = userInfo[msg.sender];
         uint256 userReward = pendingRewards(msg.sender);
 
-        if (userReward <= 0) revert NotEnoughRewards();
+        if (userReward == 0) revert NotEnoughRewards();
         IERC20(trg).transfer(msg.sender, userReward);
 
         user.rewardDebt += userReward;
@@ -100,7 +100,7 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
     function emergencyWithdraw() public {
         UserInfo storage user = userInfo[msg.sender];
 
-        if (user.amount <= 0) revert NotEnoughDeposit();
+        if (user.amount == 0) revert NotEnoughDeposit();
         totalStaked -= user.amount;
 
         uint256 userReward = pendingRewards(msg.sender);
