@@ -167,11 +167,11 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
 
         uint256 beforeBalance = IERC20(_token).balanceOf(address(this));
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-        uint256 afterBalance = IERC20(_token).balanceOf(address(this)) -
+        uint256 balanceDifference = IERC20(_token).balanceOf(address(this)) -
             beforeBalance;
 
-        uint256 amountToBurn = afterBalance / 2;
-        uint256 amountForHolders = afterBalance - amountToBurn;
+        uint256 amountToBurn = balanceDifference / 2;
+        uint256 amountForHolders = balanceDifference - amountToBurn;
 
         IERC20(_token).transfer(Liquidity.DEAD_ADDRESS, amountToBurn);
 

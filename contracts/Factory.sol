@@ -91,11 +91,11 @@ contract Factory is
         rewardTax = _rewardTax;
         trgTax = _trgTax;
 
-        callbackGasLimit = 300000;
+        callbackGasLimit = 100000;
         requestConfirmations = 3;
-        numWords = 10;
+        numWords = 3;
         linkAddress = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
-        wrapperAddress = 0x5A861794B927983406fCE1D062e00b9368d97Df6;
+        wrapperAddress = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
         LINK = LinkTokenInterface(linkAddress);
         VRF_V2_WRAPPER = VRFV2WrapperInterface(wrapperAddress);
@@ -322,8 +322,8 @@ contract Factory is
         linkAddress = _linkAddress;
         wrapperAddress = _wrapperAddress;
 
-        LINK = LinkTokenInterface(linkAddress);
-        VRF_V2_WRAPPER = VRFV2WrapperInterface(wrapperAddress);
+        LINK = LinkTokenInterface(_linkAddress);
+        VRF_V2_WRAPPER = VRFV2WrapperInterface(_wrapperAddress);
     }
 
     function requestRandomness(
