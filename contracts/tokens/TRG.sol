@@ -1,4 +1,10 @@
-// SPDX-License-Identifier: MIT
+/**
+ * SPDX-License-Identifier: MIT
+ * Website: https://theruggame.io
+ * Twitter: https://twitter.com/theruggame?s=21&t=hG-ATDCRgXZRCYK35wD-zw
+ * Telegram: https://t.me/theruggame
+ **/
+
 pragma solidity =0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
