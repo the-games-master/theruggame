@@ -17,4 +17,6 @@ interface IFactory {
     function rewardTax() external view returns (uint256);
 
     function trgTax() external view returns (uint256);
+
+    function isValidBribe(address) external view returns (bool);
 }

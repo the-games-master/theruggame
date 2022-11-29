@@ -138,7 +138,7 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
         if (_user == Liquidity.DEAD_ADDRESS || _user == pair) return 0;
 
         uint256 userBalance = balanceOf(_user);
-        if (userBalance <= 0) return 0;
+        if (userBalance == 0) return 0;
 
         uint256 amount = ((dividendPerToken() - _xDividendPerToken[_user]) *
             userBalance) / 1e18;
@@ -147,7 +147,7 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
 
     function claimReward() external {
         uint256 userReward = pendingRewards(msg.sender);
-        if (userReward <= 0) revert NotEnoughRewards();
+        if (userReward == 0) revert NotEnoughRewards();
 
         _credit[msg.sender] = 0;
         _xDividendPerToken[msg.sender] = dividendPerToken();
@@ -155,9 +155,7 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
     }
 
     function bribe(address _token, uint256 _amount) external {
-        address pair = Liquidity.getPair(address(this), Liquidity.WETH);
-        bool isRugged = IERC20(pair).balanceOf(factory) == 0;
-
+        bool isRugged = IFactory(factory).isValidBribe(address(this));
         if (isRugged) revert EliminatedToken();
 
         if (_token != cult() && _token != trg()) revert InvalidBribeToken();

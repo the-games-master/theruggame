@@ -182,6 +182,13 @@ contract Factory is
         point = point == type(uint256).max ? 0 : point;
     }
 
+    function isValidBribe(address _token) external view returns (bool) {
+        for (uint8 i = 0; i < eliminatedTokens.length; i++) {
+            if (eliminatedTokens[i] == _token) return true;
+        }
+        return false;
+    }
+
     function distributeRewardsAndRugLoser() private {
         if (_rugDays.length == 0 || _rugDays[eliminatedTokens.length] == 0)
             revert InvalidEliminationDay();
@@ -208,7 +215,7 @@ contract Factory is
 
         uint256 totalActiveReward = totalReward - _winnerTotalRewards;
 
-        if (totalActiveReward <= 0) revert NotEnoughRewards();
+        if (totalActiveReward == 0) revert NotEnoughRewards();
 
         IERC20Upgradeable(Liquidity.WETH).transfer(
             winnerToken,
@@ -349,8 +356,8 @@ contract Factory is
     ) internal {
         for (uint8 i = 0; i < numWords; i++) {
             uint256 day = ((_randomWords[i] % 30) + 31) * 1 days;
-            _rugDays.push(day);
             _gameEndTime += day;
+            _rugDays.push(_gameEndTime);
         }
     }
 
