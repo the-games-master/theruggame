@@ -28,9 +28,11 @@ contract Factory is
     address public linkAddress;
     uint256 public rewardTax;
     uint256 public trgTax;
+    uint256 public slippage;
     address public cult;
     address public dCult;
     address public trg;
+    address public sTrg;
     address public wrapperAddress;
 
     LinkTokenInterface private LINK;
@@ -64,9 +66,12 @@ contract Factory is
     );
     event TokenCreated(address token);
     event TrgUpdated(address updatedTrg);
+    event STrgUpdated(address updatedSTrg);
+    event SlippageUpdated(uint256 slippage);
 
     function initialize(
         address _trg,
+        address _sTrg,
         address _cult,
         address _dCult,
         uint256 _burnTax,
@@ -84,12 +89,14 @@ contract Factory is
             revert InvalidTax();
 
         trg = _trg;
+        sTrg = _sTrg;
         cult = _cult;
         dCult = _dCult;
         burnTax = _burnTax;
         cultTax = _cultTax;
         rewardTax = _rewardTax;
         trgTax = _trgTax;
+        slippage = 60;
 
         callbackGasLimit = 100000;
         requestConfirmations = 3;
@@ -126,60 +133,46 @@ contract Factory is
         emit TokenCreated(_token);
     }
 
-    function _getPoints(address _token) private view returns (uint256 points) {
+    function _getPoints(address _token) private view returns (uint256) {
         return THERUGGAME(_token).points();
     }
 
-    function _getWethReward(address _token)
-        private
-        view
-        returns (uint256 points)
-    {
+    function _getWethReward(address _token) private view returns (uint256) {
         return THERUGGAME(_token).wethReward();
     }
 
-    function getWinner()
-        public
+    function getWinnerAndLoser()
+        private
         view
         returns (
             address winnerToken,
-            uint256 point,
-            uint256 index
-        )
-    {
-        for (uint256 i = 0; i < activeTokens.length; i++) {
-            if (
-                activeTokens[i] != address(0) &&
-                _getPoints(activeTokens[i]) >= point
-            ) {
-                point = _getPoints(activeTokens[i]);
-                winnerToken = activeTokens[i];
-                index = i;
-            }
-        }
-    }
-
-    function getLoser()
-        public
-        view
-        returns (
             address loserToken,
-            uint256 point,
-            uint256 index
+            uint256 winnerPoints,
+            uint256 loserPoints,
+            uint256 winnerIndex,
+            uint256 loserIndex
         )
     {
-        point = type(uint256).max;
+        loserPoints = type(uint256).max;
         for (uint256 i = 0; i < activeTokens.length; i++) {
             if (
                 activeTokens[i] != address(0) &&
-                _getPoints(activeTokens[i]) <= point
+                _getPoints(activeTokens[i]) >= winnerPoints
             ) {
-                point = _getPoints(activeTokens[i]);
+                winnerPoints = _getPoints(activeTokens[i]);
+                winnerToken = activeTokens[i];
+                winnerIndex = i;
+            }
+            if (
+                activeTokens[i] != address(0) &&
+                _getPoints(activeTokens[i]) <= loserPoints
+            ) {
+                loserPoints = _getPoints(activeTokens[i]);
                 loserToken = activeTokens[i];
-                index = i;
+                loserIndex = i;
             }
         }
-        point = point == type(uint256).max ? 0 : point;
+        loserPoints = loserPoints == type(uint256).max ? 0 : loserPoints;
     }
 
     function isValidBribe(address _token) external view returns (bool) {
@@ -196,18 +189,22 @@ contract Factory is
         uint256 validTime = gameStartTime + (_rugDays[eliminatedTokens.length]);
         if (block.timestamp < validTime) revert TooEarly();
 
-        (address winnerToken, , ) = getWinner();
-        (address loserToken, , ) = getLoser();
+        (
+            address winnerToken,
+            address loserToken,
+            ,
+            ,
+            ,
+            uint256 index
+        ) = getWinnerAndLoser();
         if (winnerToken == address(0) || loserToken == address(0))
             revert InvalidAddress();
 
-        _distributeRewards();
-        _rugLoser();
+        _distributeRewards(winnerToken);
+        _rugLoser(loserToken, index);
     }
 
-    function _distributeRewards() private {
-        (address winnerToken, , ) = getWinner();
-
+    function _distributeRewards(address _winnerToken) private {
         uint256 totalReward;
         for (uint256 i = 0; i < gameTokens.length; i++) {
             totalReward += _getWethReward(gameTokens[i]);
@@ -215,69 +212,83 @@ contract Factory is
 
         uint256 totalActiveReward = totalReward - _winnerTotalRewards;
 
-        if (totalActiveReward == 0) revert NotEnoughRewards();
+        if (totalActiveReward <= 0) revert NotEnoughRewards();
 
         IERC20Upgradeable(Liquidity.WETH).transfer(
-            winnerToken,
+            _winnerToken,
             totalActiveReward
         );
 
-        address pair = Liquidity.getPair(winnerToken, Liquidity.WETH);
-        uint256 validSupply = IERC20(winnerToken).totalSupply() -
-            (IERC20(winnerToken).balanceOf(pair) +
-                IERC20(winnerToken).balanceOf(Liquidity.DEAD_ADDRESS) +
-                IERC20(winnerToken).balanceOf(winnerToken));
+        address pair = Liquidity.getPair(_winnerToken, Liquidity.WETH);
+        uint256 validSupply = IERC20(_winnerToken).totalSupply() -
+            (IERC20(_winnerToken).balanceOf(pair) +
+                IERC20(_winnerToken).balanceOf(Liquidity.DEAD_ADDRESS) +
+                IERC20(_winnerToken).balanceOf(_winnerToken));
 
         _winnerTotalRewards += totalActiveReward;
-        winnerTotalRewards[winnerToken] += totalActiveReward;
-        dividendPerToken[winnerToken] +=
-            (totalActiveReward * 1e18) /
-            validSupply;
+        winnerTotalRewards[_winnerToken] += totalActiveReward;
+        if (validSupply > 0) {
+            dividendPerToken[_winnerToken] +=
+                (totalActiveReward * 1e18) /
+                validSupply;
+        }
     }
 
-    function _rugLoser() private {
-        (address loserToken, , uint256 index) = getLoser();
+    function _rugLoser(address _loserToken, uint256 _index) private {
         (, uint256 amountB) = Liquidity.removeLiquidity(
-            loserToken,
+            _loserToken,
             Liquidity.WETH,
             address(this)
         );
 
-        eliminatedTokens.push(loserToken);
-        delete activeTokens[index];
+        eliminatedTokens.push(_loserToken);
+        delete activeTokens[_index];
 
         uint256 swappedTrg = Liquidity.swap(
             Liquidity.WETH,
             trg,
             amountB,
-            0,
+            slippage,
             address(this)
         );
-        IERC20Upgradeable(trg).transfer(trg, swappedTrg);
+        IERC20Upgradeable(trg).transfer(sTrg, swappedTrg);
     }
 
-    function changeCult(address _cult) external onlyOwner {
+    function updateCult(address _cult) external onlyOwner {
         if (_cult == address(0)) revert InvalidAddress();
         cult = _cult;
 
         emit CultUpdated(_cult);
     }
 
-    function changeDCult(address _dCult) external onlyOwner {
+    function updateDCult(address _dCult) external onlyOwner {
         if (_dCult == address(0)) revert InvalidAddress();
         dCult = _dCult;
 
         emit DCultUpdated(_dCult);
     }
 
-    function changeTrg(address _trg) external onlyOwner {
+    function updateTrg(address _trg) external onlyOwner {
         if (_trg == address(0)) revert InvalidAddress();
         trg = _trg;
 
         emit TrgUpdated(_trg);
     }
 
-    function changeTaxes(
+    function updateSTrg(address _sTrg) external onlyOwner {
+        if (_sTrg == address(0)) revert InvalidAddress();
+        sTrg = _sTrg;
+
+        emit STrgUpdated(_sTrg);
+    }
+
+    function updateSlippage(uint256 _slippage) external onlyOwner {
+        slippage = _slippage;
+
+        emit SlippageUpdated(_slippage);
+    }
+
+    function updateTaxes(
         uint256 _burnTax,
         uint256 _cultTax,
         uint256 _rewardTax,
@@ -298,14 +309,6 @@ contract Factory is
         delete activeTokens[_index];
     }
 
-    function pauseToken(uint256 _gameTokenIndex) external onlyOwner {
-        THERUGGAME(gameTokens[_gameTokenIndex]).pause();
-    }
-
-    function unpauseToken(uint256 _gameTokenIndex) external onlyOwner {
-        THERUGGAME(gameTokens[_gameTokenIndex]).unpause();
-    }
-
     function _authorizeUpgrade(address newImplementation)
         internal
         override
@@ -319,7 +322,7 @@ contract Factory is
         uint32 _numWords,
         address _linkAddress,
         address _wrapperAddress
-    ) external onlyOwner {
+    ) public onlyOwner {
         if (_linkAddress == address(0) || _wrapperAddress == address(0))
             revert InvalidAddress();
 
