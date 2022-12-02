@@ -8,6 +8,8 @@ interface IFactory {
 
     function trg() external view returns (address);
 
+    function sTrg() external view returns (address);
+
     function dividendPerToken(address) external view returns (uint256);
 
     function burnTax() external view returns (uint256);
@@ -19,4 +21,6 @@ interface IFactory {
     function trgTax() external view returns (uint256);
 
     function isValidBribe(address) external view returns (bool);
+
+    function slippage() external view returns (uint256);
 }
