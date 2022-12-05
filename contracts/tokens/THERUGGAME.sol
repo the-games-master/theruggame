@@ -2,12 +2,11 @@
 pragma solidity =0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../interfaces/IFactory.sol";
 import "../Liquidity.sol";
 
-contract THERUGGAME is ERC20, Pausable, Ownable {
+contract THERUGGAME is ERC20, Ownable {
     uint256 private _feesOnContract;
     uint256 public points;
     uint256 public wethReward;
@@ -35,14 +34,6 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
     ) ERC20(_name, _symbol) {
         _mint(msg.sender, _supply);
         factory = _factory;
-    }
-
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override whenNotPaused {
-        super._beforeTokenTransfer(from, to, amount);
     }
 
     function _transfer(
@@ -78,7 +69,7 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
                     address(this),
                     Liquidity.WETH,
                     (_feesOnContract * rewardTax()) / 10000,
-                    0,
+                    slippage(),
                     factory
                 );
                 uint256 burnAmount = (_feesOnContract * burnTax()) / 10000;
@@ -106,10 +97,10 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
                 address(this),
                 _tokenOut,
                 _amountIn,
-                0,
+                slippage(),
                 address(this)
             );
-            IERC20(_tokenOut).transfer(Liquidity.DEAD_ADDRESS, swappedAmount);
+            transferIERC20(_tokenOut, Liquidity.DEAD_ADDRESS, swappedAmount);
 
             return swappedAmount;
         }
@@ -151,42 +142,54 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
 
         _credit[msg.sender] = 0;
         _xDividendPerToken[msg.sender] = dividendPerToken();
-        IERC20(Liquidity.WETH).transfer(msg.sender, userReward);
+        transferIERC20(Liquidity.WETH, msg.sender, userReward);
     }
 
     function bribe(address _token, uint256 _amount) external {
         bool isRugged = IFactory(factory).isValidBribe(address(this));
         if (isRugged) revert EliminatedToken();
 
-        if (_token != cult() && _token != trg()) revert InvalidBribeToken();
+        if (
+            (_token != cult() && _token != trg()) ||
+            trgTax() == 0 ||
+            cultTax() == 0
+        ) revert InvalidBribeToken();
 
-        if (IERC20(_token).balanceOf(msg.sender) < _amount)
+        if (balanceOfIERC20(_token, msg.sender) < _amount)
             revert NotEnoughBalance();
 
-        uint256 beforeBalance = IERC20(_token).balanceOf(address(this));
+        uint256 beforeBalance = balanceOfIERC20(_token, address(this));
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-        uint256 balanceDifference = IERC20(_token).balanceOf(address(this)) -
+        uint256 balanceDifference = balanceOfIERC20(_token, address(this)) -
             beforeBalance;
 
         uint256 amountToBurn = balanceDifference / 2;
         uint256 amountForHolders = balanceDifference - amountToBurn;
 
-        IERC20(_token).transfer(Liquidity.DEAD_ADDRESS, amountToBurn);
+        transferIERC20(_token, Liquidity.DEAD_ADDRESS, amountToBurn);
 
-        if (_token == trg()) IERC20(trg()).transfer(trg(), amountForHolders);
-        else IERC20(cult()).transfer(dCult(), amountForHolders);
+        if (_token == trg()) transferIERC20(trg(), sTrg(), amountForHolders);
+        if (_token == cult()) transferIERC20(cult(), dCult(), amountForHolders);
 
         points += (_amount * 3) / 2;
 
         emit Bribe(_token, address(this), _amount);
     }
 
-    function pause() external onlyOwner {
-        _pause();
+    function balanceOfIERC20(address _token, address _user)
+        private
+        view
+        returns (uint256)
+    {
+        return IERC20(_token).balanceOf(_user);
     }
 
-    function unpause() external onlyOwner {
-        _unpause();
+    function transferIERC20(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) private returns (bool) {
+        return IERC20(_token).transfer(_to, _amount);
     }
 
     function dividendPerToken() public view returns (uint256) {
@@ -203,6 +206,14 @@ contract THERUGGAME is ERC20, Pausable, Ownable {
 
     function trg() public view returns (address) {
         return IFactory(factory).trg();
+    }
+
+    function sTrg() public view returns (address) {
+        return IFactory(factory).sTrg();
+    }
+
+    function slippage() public view returns (uint256) {
+        return IFactory(factory).slippage();
     }
 
     function burnTax() public view returns (uint256) {
