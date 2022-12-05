@@ -7,7 +7,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFV2WrapperInterface.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "../contracts/tokens/THERUGGAME.sol";
 
 contract Factory is
@@ -25,7 +24,6 @@ contract Factory is
     uint256 public burnTax;
     uint256 public cultTax;
     uint256 public gameStartTime;
-    address public linkAddress;
     uint256 public rewardTax;
     uint256 public trgTax;
     uint256 public slippage;
@@ -33,7 +31,10 @@ contract Factory is
     address public dCult;
     address public trg;
     address public sTrg;
+    address public linkAddress;
     address public wrapperAddress;
+    address public previousWinner;
+    address public previousLoser;
 
     LinkTokenInterface private LINK;
     VRFV2WrapperInterface private VRF_V2_WRAPPER;
@@ -49,25 +50,26 @@ contract Factory is
     error InvalidAddress();
     error InvalidEliminationDay();
     error InvalidIndex();
+    error InvalidSlippage();
     error InvalidTax();
     error InvalidTime();
     error InvalidWrapperVRF();
     error NotEnoughRewards();
     error TooEarly();
 
-    event CultUpdated(address updatedCult);
-    event DCultUpdated(address updatedDCult);
-    event EliminationTimeUpdated(uint256 updatedTime);
+    event CultUpdated(address indexed updatedCult);
+    event DCultUpdated(address indexed updatedDCult);
+    event EliminationTimeUpdated(uint256 indexed updatedTime);
     event TaxesUpdated(
         uint256 burnTax,
         uint256 cultTax,
         uint256 rewardTax,
         uint256 trgTax
     );
-    event TokenCreated(address token);
-    event TrgUpdated(address updatedTrg);
-    event STrgUpdated(address updatedSTrg);
-    event SlippageUpdated(uint256 slippage);
+    event TokenCreated(address indexed token);
+    event TrgUpdated(address indexed updatedTrg);
+    event STrgUpdated(address indexed updatedSTrg);
+    event SlippageUpdated(uint256 indexed slippage);
 
     function initialize(
         address _trg,
@@ -98,14 +100,13 @@ contract Factory is
         trgTax = _trgTax;
         slippage = 60;
 
-        callbackGasLimit = 100000;
-        requestConfirmations = 3;
-        numWords = 3;
-        linkAddress = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
-        wrapperAddress = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-
-        LINK = LinkTokenInterface(linkAddress);
-        VRF_V2_WRAPPER = VRFV2WrapperInterface(wrapperAddress);
+        updateVrfConfiguration(
+            100000,
+            3,
+            3,
+            0x514910771AF9Ca656af840dff83E8264EcF986CA,
+            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+        );
     }
 
     function createToken(
@@ -141,7 +142,7 @@ contract Factory is
         return THERUGGAME(_token).wethReward();
     }
 
-    function getWinnerAndLoser()
+    function _getWinnerAndLoser()
         private
         view
         returns (
@@ -155,21 +156,17 @@ contract Factory is
     {
         loserPoints = type(uint256).max;
         for (uint256 i = 0; i < activeTokens.length; i++) {
-            if (
-                activeTokens[i] != address(0) &&
-                _getPoints(activeTokens[i]) >= winnerPoints
-            ) {
-                winnerPoints = _getPoints(activeTokens[i]);
-                winnerToken = activeTokens[i];
-                winnerIndex = i;
-            }
-            if (
-                activeTokens[i] != address(0) &&
-                _getPoints(activeTokens[i]) <= loserPoints
-            ) {
-                loserPoints = _getPoints(activeTokens[i]);
-                loserToken = activeTokens[i];
-                loserIndex = i;
+            if (activeTokens[i] != address(0)) {
+                if (_getPoints(activeTokens[i]) >= winnerPoints) {
+                    winnerPoints = _getPoints(activeTokens[i]);
+                    winnerToken = activeTokens[i];
+                    winnerIndex = i;
+                }
+                if (_getPoints(activeTokens[i]) <= loserPoints) {
+                    loserPoints = _getPoints(activeTokens[i]);
+                    loserToken = activeTokens[i];
+                    loserIndex = i;
+                }
             }
         }
         loserPoints = loserPoints == type(uint256).max ? 0 : loserPoints;
@@ -196,12 +193,16 @@ contract Factory is
             ,
             ,
             uint256 index
-        ) = getWinnerAndLoser();
+        ) = _getWinnerAndLoser();
+
         if (winnerToken == address(0) || loserToken == address(0))
             revert InvalidAddress();
 
         _distributeRewards(winnerToken);
         _rugLoser(loserToken, index);
+
+        previousWinner = winnerToken;
+        previousLoser = loserToken;
     }
 
     function _distributeRewards(address _winnerToken) private {
@@ -212,18 +213,15 @@ contract Factory is
 
         uint256 totalActiveReward = totalReward - _winnerTotalRewards;
 
-        if (totalActiveReward <= 0) revert NotEnoughRewards();
+        if (totalActiveReward == 0) revert NotEnoughRewards();
 
-        IERC20Upgradeable(Liquidity.WETH).transfer(
-            _winnerToken,
-            totalActiveReward
-        );
+        transferIERC20(Liquidity.WETH, _winnerToken, totalActiveReward);
 
         address pair = Liquidity.getPair(_winnerToken, Liquidity.WETH);
         uint256 validSupply = IERC20(_winnerToken).totalSupply() -
-            (IERC20(_winnerToken).balanceOf(pair) +
-                IERC20(_winnerToken).balanceOf(Liquidity.DEAD_ADDRESS) +
-                IERC20(_winnerToken).balanceOf(_winnerToken));
+            balanceOfIERC20(_winnerToken, pair) +
+            balanceOfIERC20(_winnerToken, Liquidity.DEAD_ADDRESS) +
+            balanceOfIERC20(_winnerToken, _winnerToken);
 
         _winnerTotalRewards += totalActiveReward;
         winnerTotalRewards[_winnerToken] += totalActiveReward;
@@ -251,7 +249,7 @@ contract Factory is
             slippage,
             address(this)
         );
-        IERC20Upgradeable(trg).transfer(sTrg, swappedTrg);
+        transferIERC20(trg, sTrg, swappedTrg);
     }
 
     function updateCult(address _cult) external onlyOwner {
@@ -283,6 +281,7 @@ contract Factory is
     }
 
     function updateSlippage(uint256 _slippage) external onlyOwner {
+        if (_slippage > 1000) revert InvalidSlippage();
         slippage = _slippage;
 
         emit SlippageUpdated(_slippage);
@@ -296,6 +295,7 @@ contract Factory is
     ) external onlyOwner {
         if (_burnTax + _cultTax + _rewardTax + _trgTax > MAX_TAX)
             revert InvalidTax();
+
         burnTax = _burnTax;
         cultTax = _cultTax;
         rewardTax = _rewardTax;
@@ -307,6 +307,22 @@ contract Factory is
     function emergencyRemoveToken(uint256 _index) external onlyOwner {
         if (activeTokens[_index] == address(0)) revert InvalidIndex();
         delete activeTokens[_index];
+    }
+
+    function balanceOfIERC20(address _token, address _user)
+        private
+        view
+        returns (uint256)
+    {
+        return IERC20(_token).balanceOf(_user);
+    }
+
+    function transferIERC20(
+        address _token,
+        address _to,
+        uint256 _amount
+    ) private returns (bool) {
+        return IERC20(_token).transfer(_to, _amount);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -372,7 +388,7 @@ contract Factory is
         fulfillRandomWords(_requestId, _randomWords);
     }
 
-    function withdrawLink() public onlyOwner {
+    function withdrawLink() external onlyOwner {
         require(LINK.transfer(msg.sender, LINK.balanceOf(address(this))));
     }
 
