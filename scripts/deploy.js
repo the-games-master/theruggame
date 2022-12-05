@@ -29,6 +29,7 @@ async function main() {
     Factory,
     [
       trg.address,
+      strg.address,
       cultAddress,
       dCultAddress,
       taxBurn,

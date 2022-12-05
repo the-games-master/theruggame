@@ -28,7 +28,12 @@ describe("Factory", () => {
     const TRG = await ethers.getContractFactory("TheRugGame");
     const trg = await TRG.deploy();
     await trg.deployed();
-    console.log("trg", trg.address, await trg.name());
+    console.log("trg", trg.address);
+
+    const STRG = await ethers.getContractFactory("STRG");
+    const sTrg = await STRG.deploy(trg.address);
+    await sTrg.deployed();
+    console.log("trg", sTrg.address);
 
     const weth = await ethers.getContractAt("ERC20", wethAddress);
     console.log("weth", weth.address);
@@ -74,7 +79,16 @@ describe("Factory", () => {
     const Factory = await ethers.getContractFactory("Factory");
     const factory = await upgrades.deployProxy(
       Factory,
-      [trg.address, cult.address, dCultAddress, 100, 200, 100, 0],
+      [
+        trg.address,
+        sTrg.address,
+        cult.address,
+        dCultAddress,
+        100,
+        100,
+        100,
+        100,
+      ],
       { initializer: "initialize", kind: "uups" }
     );
     await factory.deployed();
@@ -127,8 +141,7 @@ describe("Factory", () => {
     await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
     console.log(
       "T token balance before",
-      await newTokenT.balanceOf(owner.address),
-      await newTokenT.balanceOf(newTokenT.address)
+      await newTokenT.balanceOf(owner.address)
     );
     console.log(
       "amount out pathWT",
@@ -148,8 +161,7 @@ describe("Factory", () => {
     await newTokenT.approve(routerU.address, ethers.utils.parseEther("500"));
     console.log(
       "weth token balance before",
-      await weth.balanceOf(owner.address),
-      await newTokenT.balanceOf(newTokenT.address)
+      await weth.balanceOf(owner.address)
     );
     console.log(
       "amount out pathTW",
@@ -297,26 +309,18 @@ describe("Factory", () => {
     console.log("points after bribe", await newTokenH.points());
 
     console.log("\n\n\nWinner-------------------------------------");
-    console.log("get winner", await factory.getWinner());
-    console.log("get loser", await factory.getLoser());
-
     await factory.rawFulfillRandomWords(1, [31, 32, 33]);
-    // let totalDays = 0;
-    // for (let i = 0; i < 3; i++) {
-    //   let day = parseInt(await factory._rugDays(i)) / 86400;
-    //   console.log(`rug days ${i + 1} are`, day);
-    //   totalDays += day;
-    // }
-    // console.log("Total days estimated", totalDays);
-    // console.log(
-    //   "Total days from contract",
-    //   parseInt(await factory._gameEndTime()) / 86400
-    // );
+
+    console.log("previous winner", await factory.previousWinner());
+    console.log("previous loser", await factory.previousLoser());
 
     await network.provider.send("evm_increaseTime", [32 * 86400]);
     await network.provider.send("evm_mine");
     await factory.performUpkeep(0x00);
     console.log("rugged 1");
+
+    console.log("previous winner", await factory.previousWinner());
+    console.log("previous loser", await factory.previousLoser());
 
     const userReward = await newTokenT.pendingRewards(owner.address);
     console.log(
@@ -351,13 +355,16 @@ describe("Factory", () => {
       1e12
     );
     console.log("owner bal after", await weth.balanceOf(owner.address));
-    console.log("get winner", await factory.getWinner());
-    console.log("get loser", await factory.getLoser());
+    // console.log("get winner", await factory._getWinnerAndLoser());
+    // console.log("get loser", await factory.getLoser());
 
     await network.provider.send("evm_increaseTime", [65 * 86400]);
     await network.provider.send("evm_mine");
     await factory.performUpkeep(0x00);
     console.log("rugged 2");
+
+    console.log("previous winner", await factory.previousWinner());
+    console.log("previous loser", await factory.previousLoser());
 
     const userReward2 = await newTokenT.pendingRewards(owner.address);
     console.log(
@@ -381,13 +388,16 @@ describe("Factory", () => {
       1e12
     );
 
-    console.log("get winner", await factory.getWinner());
-    console.log("get loser", await factory.getLoser());
+    // console.log("get winner", await factory._getWinnerAndLoser());
+    // console.log("get loser", await factory.getLoser());
 
     await network.provider.send("evm_increaseTime", [99 * 86400]);
     await network.provider.send("evm_mine");
     await factory.performUpkeep(0x00);
     console.log("rugged 3");
+
+    console.log("previous winner", await factory.previousWinner());
+    console.log("previous loser", await factory.previousLoser());
 
     const userReward3 = await newTokenT.pendingRewards(owner.address);
     console.log(

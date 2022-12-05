@@ -27,7 +27,7 @@ async function main() {
   const Factory = await ethers.getContractFactory("Factory");
   const factory = await upgrades.deployProxy(
     Factory,
-    [trg.address, cult.address, dCultAddress, 100, 100, 100, 100],
+    [trg.address, strg.address, cult.address, dCultAddress, 100, 100, 100, 100],
     { initializer: "initialize", kind: "uups" }
   );
   await factory.deployed();
