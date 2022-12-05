@@ -1,20 +1,12 @@
-/**
- * SPDX-License-Identifier: MIT
- * Website: https://theruggame.io
- * Twitter: https://twitter.com/theruggame?s=21&t=hG-ATDCRgXZRCYK35wD-zw
- * Telegram: https://t.me/theruggame
- **/
-
+// SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "../interfaces/IStrg.sol";
 
-contract TheRugGame is ERC20, Pausable, Ownable, ERC20Permit, ERC20Votes {
+contract TheRugGame is ERC20, Ownable, ERC20Votes {
     address public sTrg;
     uint256 public dividendPerToken;
 
@@ -29,19 +21,11 @@ contract TheRugGame is ERC20, Pausable, Ownable, ERC20Permit, ERC20Votes {
         sTrg = _sTrg;
     }
 
-    function pause() public onlyOwner {
-        _pause();
-    }
-
-    function unpause() public onlyOwner {
-        _unpause();
-    }
-
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal override whenNotPaused {
+    ) internal override {
         if (msg.sender != sTrg && to == sTrg) {
             uint256 totalStaked = IStrg(sTrg).totalStaked();
             if (totalStaked > 0 && amount > 0) {

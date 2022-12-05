@@ -82,9 +82,10 @@ library Liquidity {
             path[2] = _tokenOut;
         }
 
-        uint256 _amountOutMin = (getAmountOut(_amountIn, path)[
-            path.length - 1
-        ] * (1000 - _slippage)) / 100;
+        uint256 _amountOutMin = (IUniswapV2Router(ROUTER).getAmountsOut(
+            _amountIn,
+            path
+        )[path.length - 1] * (1000 - _slippage)) / 1000;
 
         uint256 balanceBefore = IERC20(_tokenOut).balanceOf(_to);
         IUniswapV2Router(ROUTER)
@@ -96,8 +97,7 @@ library Liquidity {
                 block.timestamp
             );
         uint256 balanceAfter = IERC20(_tokenOut).balanceOf(_to);
-        uint256 swappedAmount = balanceAfter - balanceBefore;
-        return swappedAmount;
+        return balanceAfter - balanceBefore;
     }
 
     function getPair(address _tokenA, address _tokenB)
@@ -106,13 +106,5 @@ library Liquidity {
         returns (address)
     {
         return IUniswapV2Factory(FACTORY).getPair(_tokenA, _tokenB);
-    }
-
-    function getAmountOut(uint256 _amountIn, address[] memory path)
-        internal
-        view
-        returns (uint256[] memory amounts)
-    {
-        return IUniswapV2Router(ROUTER).getAmountsOut(_amountIn, path);
     }
 }

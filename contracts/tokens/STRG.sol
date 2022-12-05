@@ -1,13 +1,12 @@
-// // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity =0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "../interfaces/ITrg.sol";
 
-contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
+contract STRG is ERC20, ERC20Burnable, Ownable {
     struct UserInfo {
         uint256 amount;
         uint256 rewardDebt;
@@ -34,8 +33,9 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
     }
 
     function deposit(uint256 _amount) public {
-        if (IERC20(trg).balanceOf(msg.sender) < _amount)
+        if (IERC20(trg).balanceOf(msg.sender) < _amount) {
             revert NotEnoughBalance();
+        }
 
         UserInfo storage user = userInfo[msg.sender];
 
@@ -73,7 +73,9 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
         UserInfo storage user = userInfo[msg.sender];
         uint256 userReward = pendingRewards(msg.sender);
 
-        if (userReward == 0) revert NotEnoughRewards();
+        if (userReward == 0) {
+            revert NotEnoughRewards();
+        }
         IERC20(trg).transfer(msg.sender, userReward);
 
         user.rewardDebt += userReward;
@@ -83,7 +85,9 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
     function withdraw(uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
 
-        if (user.amount < _amount) revert NotEnoughDeposit();
+        if (user.amount < _amount) {
+            revert NotEnoughDeposit();
+        }
         uint256 userReward = pendingRewards(msg.sender);
 
         IERC20(trg).transfer(msg.sender, _amount + userReward);
@@ -100,7 +104,9 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
     function emergencyWithdraw() public {
         UserInfo storage user = userInfo[msg.sender];
 
-        if (user.amount == 0) revert NotEnoughDeposit();
+        if (user.amount == 0) {
+            revert NotEnoughDeposit();
+        }
         totalStaked -= user.amount;
 
         uint256 userReward = pendingRewards(msg.sender);
@@ -121,19 +127,11 @@ contract STRG is ERC20, ERC20Burnable, Pausable, Ownable {
         return _dividendPerToken + ITrg(trg).dividendPerToken();
     }
 
-    function pause() public onlyOwner {
-        _pause();
-    }
-
-    function unpause() public onlyOwner {
-        _unpause();
-    }
-
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal override whenNotPaused {
+    ) internal override {
         if (from == address(0) || to == address(0)) {
             super._beforeTokenTransfer(from, to, amount);
         } else {
