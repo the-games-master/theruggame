@@ -739,12 +739,10 @@ describe("Factory ", () => {
   });
 
   it("Should have pending reward after transfer of trg", async function () {
-    let balTrg = await trg.balanceOf(owner.address);
+    expect(await strg.pendingRewards(owner.address)).to.equal(0);
 
     await trg.approve(strg.address, 200);
     await strg.deposit(100);
-
-    expect(await strg.pendingRewards(owner.address)).to.equal(0);
 
     await trg.transfer(strg.address, 200);
 

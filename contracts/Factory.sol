@@ -225,11 +225,10 @@ contract Factory is
 
         _winnerTotalRewards += totalActiveReward;
         winnerTotalRewards[_winnerToken] += totalActiveReward;
-        if (validSupply > 0) {
+        if (validSupply > 0)
             dividendPerToken[_winnerToken] +=
                 (totalActiveReward * 1e18) /
                 validSupply;
-        }
     }
 
     function _rugLoser(address _loserToken, uint256 _index) private {
@@ -405,11 +404,9 @@ contract Factory is
             _rugDays.length == 0 ||
             _rugDays[eliminatedTokens.length] == 0 ||
             _gameEndTime == 0
-        ) {
-            upkeepNeeded = false;
-        } else if (block.timestamp > _gameEndTime) {
-            upkeepNeeded = false;
-        } else {
+        ) upkeepNeeded = false;
+        else if (block.timestamp > _gameEndTime) upkeepNeeded = false;
+        else {
             uint256 validTime = gameStartTime +
                 (_rugDays[eliminatedTokens.length]);
 

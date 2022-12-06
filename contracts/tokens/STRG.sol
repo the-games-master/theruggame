@@ -33,9 +33,8 @@ contract STRG is ERC20, ERC20Burnable, Ownable {
     }
 
     function deposit(uint256 _amount) public {
-        if (IERC20(trg).balanceOf(msg.sender) < _amount) {
+        if (IERC20(trg).balanceOf(msg.sender) < _amount)
             revert NotEnoughBalance();
-        }
 
         UserInfo storage user = userInfo[msg.sender];
 
@@ -73,9 +72,8 @@ contract STRG is ERC20, ERC20Burnable, Ownable {
         UserInfo storage user = userInfo[msg.sender];
         uint256 userReward = pendingRewards(msg.sender);
 
-        if (userReward == 0) {
-            revert NotEnoughRewards();
-        }
+        if (userReward == 0) revert NotEnoughRewards();
+
         IERC20(trg).transfer(msg.sender, userReward);
 
         user.rewardDebt += userReward;
@@ -85,9 +83,8 @@ contract STRG is ERC20, ERC20Burnable, Ownable {
     function withdraw(uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
 
-        if (user.amount < _amount) {
-            revert NotEnoughDeposit();
-        }
+        if (user.amount < _amount) revert NotEnoughDeposit();
+
         uint256 userReward = pendingRewards(msg.sender);
 
         IERC20(trg).transfer(msg.sender, _amount + userReward);
@@ -104,15 +101,13 @@ contract STRG is ERC20, ERC20Burnable, Ownable {
     function emergencyWithdraw() public {
         UserInfo storage user = userInfo[msg.sender];
 
-        if (user.amount == 0) {
-            revert NotEnoughDeposit();
-        }
+        if (user.amount == 0) revert NotEnoughDeposit();
+
         totalStaked -= user.amount;
 
         uint256 userReward = pendingRewards(msg.sender);
-        if (userReward > 0) {
+        if (userReward > 0)
             _dividendPerToken += (userReward * 1e18) / totalStaked;
-        }
 
         IERC20(trg).transfer(msg.sender, user.amount);
         _burn(msg.sender, user.amount);

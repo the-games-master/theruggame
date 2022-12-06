@@ -28,9 +28,8 @@ contract TheRugGame is ERC20, Ownable, ERC20Votes {
     ) internal override {
         if (msg.sender != sTrg && to == sTrg) {
             uint256 totalStaked = IStrg(sTrg).totalStaked();
-            if (totalStaked > 0 && amount > 0) {
+            if (totalStaked > 0 && amount > 0)
                 dividendPerToken += (amount * 1e18) / totalStaked;
-            }
         }
 
         super._beforeTokenTransfer(from, to, amount);
