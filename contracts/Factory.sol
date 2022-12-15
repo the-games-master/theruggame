@@ -17,7 +17,7 @@ contract Factory is
 {
     uint256 private _gameEndTime;
     uint256 private _winnerTotalRewards;
-    uint256 public constant MAX_TAX = 400;
+    uint16 public constant MAX_TAX = 400;
     uint16 public requestConfirmations;
     uint32 public callbackGasLimit;
     uint32 public numWords;
@@ -35,6 +35,7 @@ contract Factory is
     address public wrapperAddress;
     address public previousWinner;
     address public previousLoser;
+    bool public rugDaysRequestStatus;
 
     LinkTokenInterface private LINK;
     VRFV2WrapperInterface private VRF_V2_WRAPPER;
@@ -98,7 +99,7 @@ contract Factory is
         cultTax = _cultTax;
         rewardTax = _rewardTax;
         trgTax = _trgTax;
-        slippage = 60;
+        slippage = 50;
 
         updateVrfConfiguration(
             100000,
@@ -366,6 +367,7 @@ contract Factory is
 
     function requestRugDays() external onlyOwner {
         requestRandomness(callbackGasLimit, requestConfirmations, numWords);
+        rugDaysRequestStatus = false;
     }
 
     function fulfillRandomWords(
@@ -377,6 +379,7 @@ contract Factory is
             _gameEndTime += day;
             _rugDays.push(_gameEndTime);
         }
+        rugDaysRequestStatus = true;
     }
 
     function rawFulfillRandomWords(
@@ -405,7 +408,7 @@ contract Factory is
             _rugDays[eliminatedTokens.length] == 0 ||
             _gameEndTime == 0
         ) upkeepNeeded = false;
-        else if (block.timestamp > _gameEndTime) upkeepNeeded = false;
+        else if (block.timestamp > gameStartTime + _gameEndTime) upkeepNeeded = false;
         else {
             uint256 validTime = gameStartTime +
                 (_rugDays[eliminatedTokens.length]);
