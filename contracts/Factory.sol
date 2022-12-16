@@ -55,7 +55,6 @@ contract Factory is
     error InvalidTax();
     error InvalidTime();
     error InvalidWrapperVRF();
-    error NotEnoughRewards();
     error TooEarly();
 
     event CultUpdated(address indexed updatedCult);
@@ -214,8 +213,6 @@ contract Factory is
 
         uint256 totalActiveReward = totalReward - _winnerTotalRewards;
 
-        if (totalActiveReward == 0) revert NotEnoughRewards();
-
         transferIERC20(Liquidity.WETH, _winnerToken, totalActiveReward);
 
         address pair = Liquidity.getPair(_winnerToken, Liquidity.WETH);
@@ -302,11 +299,6 @@ contract Factory is
         trgTax = _trgTax;
 
         emit TaxesUpdated(_burnTax, _cultTax, _rewardTax, _trgTax);
-    }
-
-    function emergencyRemoveToken(uint256 _index) external onlyOwner {
-        if (activeTokens[_index] == address(0)) revert InvalidIndex();
-        delete activeTokens[_index];
     }
 
     function balanceOfIERC20(address _token, address _user)
