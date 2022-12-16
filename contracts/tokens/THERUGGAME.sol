@@ -59,20 +59,20 @@ contract THERUGGAME is ERC20, Ownable {
             if (from != pair) {
                 uint256 swappedCult = _buyAndBurnToken(
                     cult(),
-                    (_feesOnContract * cultTax()) / 10000
+                    (_feesOnContract * cultTax()) / totalTax
                 );
                 uint256 swappedTrg = _buyAndBurnToken(
                     trg(),
-                    (_feesOnContract * trgTax()) / 10000
+                    (_feesOnContract * trgTax()) / totalTax
                 );
                 uint256 swappedWeth = Liquidity.swap(
                     address(this),
                     Liquidity.WETH,
-                    (_feesOnContract * rewardTax()) / 10000,
+                    (_feesOnContract * rewardTax()) / totalTax,
                     slippage(),
                     factory
                 );
-                uint256 burnAmount = (_feesOnContract * burnTax()) / 10000;
+                uint256 burnAmount = (_feesOnContract * burnTax()) / totalTax;
                 super._transfer(
                     address(this),
                     Liquidity.DEAD_ADDRESS,
