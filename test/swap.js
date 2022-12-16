@@ -355,8 +355,6 @@ describe("Factory", () => {
       1e12
     );
     console.log("owner bal after", await weth.balanceOf(owner.address));
-    // console.log("get winner", await factory._getWinnerAndLoser());
-    // console.log("get loser", await factory.getLoser());
 
     await network.provider.send("evm_increaseTime", [65 * 86400]);
     await network.provider.send("evm_mine");
@@ -387,9 +385,6 @@ describe("Factory", () => {
       owner.address,
       1e12
     );
-
-    // console.log("get winner", await factory._getWinnerAndLoser());
-    // console.log("get loser", await factory.getLoser());
 
     await network.provider.send("evm_increaseTime", [99 * 86400]);
     await network.provider.send("evm_mine");
