@@ -119,6 +119,9 @@ contract Factory is
             new THERUGGAME(name, symbol, amountToken, address(this))
         );
 
+        if (block.timestamp <= gameStartTime + _gameEndTime)
+            revert InvalidTime();
+
         gameTokens.push(_token);
         activeTokens.push(_token);
         Liquidity.addLiquidity(
@@ -130,6 +133,7 @@ contract Factory is
         );
 
         gameStartTime = block.timestamp;
+        _gameEndTime = 0;
 
         emit TokenCreated(_token);
     }
@@ -278,7 +282,7 @@ contract Factory is
     }
 
     function updateSlippage(uint256 _slippage) external onlyOwner {
-        if (_slippage > 1000) revert InvalidSlippage();
+        if (_slippage > 1000 && _slippage < 40) revert InvalidSlippage();
         slippage = _slippage;
 
         emit SlippageUpdated(_slippage);
@@ -358,6 +362,9 @@ contract Factory is
     }
 
     function requestRugDays() external onlyOwner {
+        if (_rugDays.length + numWords != activeTokens.length)
+            revert InvalidTime();
+
         requestRandomness(callbackGasLimit, requestConfirmations, numWords);
         rugDaysRequestStatus = false;
     }
@@ -400,7 +407,10 @@ contract Factory is
             _rugDays[eliminatedTokens.length] == 0 ||
             _gameEndTime == 0
         ) upkeepNeeded = false;
-        else if (block.timestamp > gameStartTime + _gameEndTime) upkeepNeeded = false;
+        else if (
+            block.timestamp > gameStartTime + _gameEndTime &&
+            eliminatedTokens.length == activeTokens.length
+        ) upkeepNeeded = false;
         else {
             uint256 validTime = gameStartTime +
                 (_rugDays[eliminatedTokens.length]);
