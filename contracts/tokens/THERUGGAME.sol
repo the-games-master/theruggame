@@ -19,6 +19,7 @@ contract THERUGGAME is ERC20, Ownable {
     error InvalidBribeToken();
     error NotEnoughBalance();
     error NotEnoughRewards();
+    error TransferLimitExceeded();
 
     event Bribe(
         address indexed tokenUsedForBribe,
@@ -42,6 +43,11 @@ contract THERUGGAME is ERC20, Ownable {
         uint256 amount
     ) internal virtual override {
         address pair = Liquidity.getPair(address(this), Liquidity.WETH);
+
+        if (to != pair && to != address(this) && to != factory) {
+            uint256 validTokenTransfer = (totalSupply() / 100) - balanceOf(to);
+            if (amount > validTokenTransfer) revert TransferLimitExceeded();
+        }
 
         _withdrawToCredit(from);
         _withdrawToCredit(to);
@@ -82,6 +88,10 @@ contract THERUGGAME is ERC20, Ownable {
                 wethReward += swappedWeth;
                 points += swappedCult + swappedTrg + (burnAmount * 100000);
                 _feesOnContract = 0;
+            } else {
+                uint256 validTokenTransfer = (totalSupply() / 100) -
+                    balanceOf(to);
+                if (amount > validTokenTransfer) revert TransferLimitExceeded();
             }
 
             return super._transfer(from, to, amount - feeAmount);
