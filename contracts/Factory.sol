@@ -55,7 +55,6 @@ contract Factory is
     error InvalidTax();
     error InvalidTime();
     error InvalidWrapperVRF();
-    error TooEarly();
 
     event CultUpdated(address indexed updatedCult);
     event DCultUpdated(address indexed updatedDCult);
@@ -119,8 +118,12 @@ contract Factory is
             new THERUGGAME(name, symbol, amountToken, address(this))
         );
 
-        if (block.timestamp <= gameStartTime + _gameEndTime)
-            revert InvalidTime();
+        if (
+            block.timestamp <= gameStartTime + _gameEndTime ||
+            (block.timestamp > gameStartTime + _gameEndTime &&
+                eliminatedTokens.length != _rugDays.length &&
+                eliminatedTokens.length != 0)
+        ) revert InvalidTime();
 
         gameTokens.push(_token);
         activeTokens.push(_token);
@@ -184,12 +187,6 @@ contract Factory is
     }
 
     function distributeRewardsAndRugLoser() private {
-        if (_rugDays.length == 0 || _rugDays[eliminatedTokens.length] == 0)
-            revert InvalidEliminationDay();
-
-        uint256 validTime = gameStartTime + (_rugDays[eliminatedTokens.length]);
-        if (block.timestamp < validTime) revert TooEarly();
-
         (
             address winnerToken,
             address loserToken,
@@ -409,7 +406,7 @@ contract Factory is
         ) upkeepNeeded = false;
         else if (
             block.timestamp > gameStartTime + _gameEndTime &&
-            eliminatedTokens.length == activeTokens.length
+            eliminatedTokens.length == _rugDays.length
         ) upkeepNeeded = false;
         else {
             uint256 validTime = gameStartTime +
@@ -422,6 +419,26 @@ contract Factory is
     function performUpkeep(
         bytes calldata /* performData */
     ) external override {
+        bool upkeepNeeded;
+        if (
+            _rugDays.length == 0 ||
+            _rugDays[eliminatedTokens.length] == 0 ||
+            _gameEndTime == 0
+        ) upkeepNeeded = false;
+        else if (
+            block.timestamp > gameStartTime + _gameEndTime &&
+            eliminatedTokens.length == _rugDays.length
+        ) upkeepNeeded = false;
+        else {
+            uint256 validTime = gameStartTime +
+                (_rugDays[eliminatedTokens.length]);
+
+            upkeepNeeded = block.timestamp >= validTime;
+        }
+
+        if (!upkeepNeeded) {
+            revert InvalidEliminationDay();
+        }
         distributeRewardsAndRugLoser();
     }
 }
