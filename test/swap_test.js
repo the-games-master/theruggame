@@ -166,17 +166,21 @@ describe("Factory ", () => {
     expect(await newTokenT.balanceOf(newTokenT.address)).to.equal(0);
 
     const pathWT = [weth.address, newTokenT.address];
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWT))[0]
-    ).to.equal("1000000000000000");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
+      )[0]
+    ).to.equal("100000000000000");
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWT))[1]
-    ).to.equal("906610893880149131581");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
+      )[1]
+    ).to.equal("98715803439706129885");
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -184,25 +188,36 @@ describe("Factory ", () => {
     );
 
     expect(await newTokenT.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
   });
 
-  it("Should swap T token with WETH", async function () {
+  it("Should not swap T token amount more than 1 percent of total supply ", async function () {
     const pathWT = [weth.address, newTokenT.address];
-
     await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWT))[0]
-    ).to.equal("1000000000000000");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
+      )[0]
+    ).to.equal("100000000000000");
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWT))[1]
-    ).to.equal("906610893880149131581");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
+      )[1]
+    ).to.equal("98715803439706129885");
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.00005"),
+      0,
+      pathWT,
+      owner.address,
+      1e12
+    );
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.00005"),
       0,
       pathWT,
       owner.address,
@@ -217,17 +232,87 @@ describe("Factory ", () => {
 
     expect(await weth.balanceOf(owner.address)).to.not.equal(0);
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "26908000000000000000"
+      "26909800000000000000"
     );
 
     expect(await newTokenT.balanceOf(owner.address)).to.not.equal(0);
     expect(await newTokenT.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94766471065726324406"
     );
 
     expect(await newTokenT.balanceOf(newTokenT.address)).to.not.equal(0);
     expect(await newTokenT.balanceOf(newTokenT.address)).to.equal(
-      "36264435755205965263"
+      "3948602961071930183"
+    );
+
+    let amountOut =
+      0.95 *
+      (await routerU.getAmountsOut(ethers.utils.parseEther("10"), pathTW))[1];
+    amountOut = Math.round(amountOut);
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("10"),
+      amountOut,
+      pathTW,
+      owner.address,
+      1e12
+    );
+
+    expect(await weth.balanceOf(owner.address)).to.not.equal(0);
+    expect(await newTokenT.balanceOf(newTokenT.address)).to.not.equal(0);
+    expect(await newTokenT.points()).to.not.equal(0);
+
+    expect(await weth.balanceOf(owner.address)).to.equal(
+      "26909809747451822433"
+    );
+
+    expect(await newTokenT.balanceOf(newTokenT.address)).to.equal("3");
+
+    expect(await newTokenT.points()).to.equal("108942640174336710340922");
+  });
+
+  it("Should swap T token with WETH", async function () {
+    const pathWT = [weth.address, newTokenT.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
+
+    expect(
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
+      )[0]
+    ).to.equal("100000000000000");
+
+    expect(
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
+      )[1]
+    ).to.equal("98715803439706129885");
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.0001"),
+      0,
+      pathWT,
+      owner.address,
+      1e12
+    );
+
+    const pathTW = [newTokenT.address, weth.address];
+    await newTokenT.approve(
+      routerU.address,
+      await newTokenT.balanceOf(owner.address)
+    );
+
+    expect(await weth.balanceOf(owner.address)).to.not.equal(0);
+    expect(await weth.balanceOf(owner.address)).to.equal(
+      "35879709747451822433"
+    );
+
+    expect(await newTokenT.balanceOf(owner.address)).to.not.equal(0);
+    expect(await newTokenT.balanceOf(owner.address)).to.equal(
+      "94767171302117884690"
+    );
+
+    expect(await newTokenT.balanceOf(newTokenT.address)).to.not.equal(0);
+    expect(await newTokenT.balanceOf(newTokenT.address)).to.equal(
+      "3948632137588245195"
     );
 
     let amountOut =
@@ -252,12 +337,12 @@ describe("Factory ", () => {
     expect(await newTokenT.points()).to.not.equal(0);
 
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "26908912854942017620"
+      "35879801324747429394"
     );
 
-    expect(await newTokenT.balanceOf(newTokenT.address)).to.equal("3");
+    expect(await newTokenT.balanceOf(newTokenT.address)).to.equal("2");
 
-    expect(await newTokenT.points()).to.equal("1781360205444617067052285");
+    expect(await newTokenT.points()).to.equal("193887945452588011937517");
   });
 
   it("Should swap WETH with H token", async function () {
@@ -270,19 +355,22 @@ describe("Factory ", () => {
     expect(await newTokenH.balanceOf(newTokenH.address)).to.equal(0);
 
     const pathWH = [weth.address, newTokenH.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
-
-    expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWH))[0]
-    ).to.equal("1000000000000000");
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWH))[1]
-    ).to.equal("906610893880149131581");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWH)
+      )[0]
+    ).to.equal("100000000000000");
+
+    expect(
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWH)
+      )[1]
+    ).to.equal("98715803439706129885");
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWH,
       owner.address,
@@ -290,25 +378,28 @@ describe("Factory ", () => {
     );
 
     expect(await newTokenH.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
   });
 
   it("Should swap H token with WETH", async function () {
     const pathWH = [weth.address, newTokenH.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
-
-    expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWH))[0]
-    ).to.equal("1000000000000000");
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWH))[1]
-    ).to.equal("906610893880149131581");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWH)
+      )[0]
+    ).to.equal("100000000000000");
+
+    expect(
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWH)
+      )[1]
+    ).to.equal("98715803439706129885");
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWH,
       owner.address,
@@ -316,11 +407,10 @@ describe("Factory ", () => {
     );
 
     expect(await newTokenH.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
 
     const pathHW = [newTokenH.address, weth.address];
-
     await newTokenH.approve(
       routerU.address,
       await newTokenH.balanceOf(owner.address)
@@ -328,17 +418,17 @@ describe("Factory ", () => {
 
     expect(await weth.balanceOf(owner.address)).to.not.equal(0);
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "44846912854942017620"
+      "53819601324747429394"
     );
 
     expect(await newTokenH.balanceOf(owner.address)).to.not.equal(0);
     expect(await newTokenH.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
 
     expect(await newTokenH.balanceOf(newTokenH.address)).to.not.equal(0);
     expect(await newTokenH.balanceOf(newTokenH.address)).to.equal(
-      "36264435755205965263"
+      "3948632137588245195"
     );
 
     let amountOut =
@@ -364,12 +454,12 @@ describe("Factory ", () => {
     expect(await newTokenH.points()).to.not.equal(0);
 
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "44847825709884035240"
+      "53819692902043036355"
     );
 
-    expect(await newTokenH.balanceOf(newTokenH.address)).to.equal("3");
+    expect(await newTokenH.balanceOf(newTokenH.address)).to.equal("2");
 
-    expect(await newTokenH.points()).to.equal("1781360205300348790827720");
+    expect(await newTokenH.points()).to.equal("193887945451367478673715");
   });
 
   it("Should swap WETH with E token", async function () {
@@ -385,15 +475,19 @@ describe("Factory ", () => {
     await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWE))[0]
-    ).to.equal("1000000000000000");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWE)
+      )[0]
+    ).to.equal("100000000000000");
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWE))[1]
-    ).to.equal("906610893880149131581");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWE)
+      )[1]
+    ).to.equal("98715803439706129885");
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWE,
       owner.address,
@@ -401,25 +495,28 @@ describe("Factory ", () => {
     );
 
     expect(await newTokenE.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
   });
 
   it("Should swap E token with WETH", async function () {
     const pathWE = [weth.address, newTokenE.address];
-
     await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWE))[0]
-    ).to.equal("1000000000000000");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWE)
+      )[0]
+    ).to.equal("100000000000000");
 
     expect(
-      (await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWE))[1]
-    ).to.equal("906610893880149131581");
+      (
+        await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWE)
+      )[1]
+    ).to.equal("98715803439706129885");
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWE,
       owner.address,
@@ -427,11 +524,10 @@ describe("Factory ", () => {
     );
 
     expect(await newTokenE.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
 
     const pathEW = [newTokenE.address, weth.address];
-
     await newTokenE.approve(
       routerU.address,
       await newTokenE.balanceOf(owner.address)
@@ -439,17 +535,17 @@ describe("Factory ", () => {
 
     expect(await weth.balanceOf(owner.address)).to.not.equal(0);
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "62785825709884035240"
+      "71759492902043036355"
     );
 
     expect(await newTokenE.balanceOf(owner.address)).to.not.equal(0);
     expect(await newTokenE.balanceOf(owner.address)).to.equal(
-      "870346458124943166318"
+      "94767171302117884690"
     );
 
     expect(await newTokenE.balanceOf(newTokenE.address)).to.not.equal(0);
     expect(await newTokenE.balanceOf(newTokenE.address)).to.equal(
-      "36264435755205965263"
+      "3948632137588245195"
     );
 
     let amountOut =
@@ -475,22 +571,21 @@ describe("Factory ", () => {
     expect(await newTokenE.points()).to.not.equal(0);
 
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "62786738564826052860"
+      "71759584479338643316"
     );
 
-    expect(await newTokenE.balanceOf(newTokenE.address)).to.equal("3");
+    expect(await newTokenE.balanceOf(newTokenE.address)).to.equal("2");
 
-    expect(await newTokenE.points()).to.equal("1781360205156080521697563");
+    expect(await newTokenE.points()).to.equal("193887945450146945415434");
   });
 
   it("Should bribe as expected", async function () {
     // T token
     const pathWT = [weth.address, newTokenT.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -498,7 +593,6 @@ describe("Factory ", () => {
     );
 
     const pathTW = [newTokenT.address, weth.address];
-
     await newTokenT.approve(
       routerU.address,
       await newTokenT.balanceOf(owner.address)
@@ -551,7 +645,7 @@ describe("Factory ", () => {
           pathHW
         )
       )[1];
-      
+
     amountOutH = Math.round(amountOutH);
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
       await newTokenH.balanceOf(owner.address),
@@ -567,18 +661,18 @@ describe("Factory ", () => {
 
     // Bribe cult
     expect(await newTokenT.points()).to.not.equal(0);
-    expect(await newTokenT.points()).to.equal("1781360205011812259661813");
+    expect(await newTokenT.points()).to.equal("193887945448926412162674");
 
     expect(await cult.balanceOf(owner.address)).to.not.equal(0);
     expect(await cult.balanceOf(owner.address)).to.equal(
-      "79680000000000000000"
+      "89640000000000000000"
     );
 
     await cult.approve(newTokenT.address, ethers.utils.parseEther("1"));
     await newTokenT.bribe(cult.address, ethers.utils.parseEther("1"));
 
     expect(await newTokenT.points()).to.not.equal(0);
-    expect(await newTokenT.points()).to.equal("1781361705011812259661813");
+    expect(await newTokenT.points()).to.equal("193889445448926412162674");
 
     // Bribe trg
     expect(await trg.balanceOf(owner.address)).to.not.equal(0);
@@ -590,17 +684,16 @@ describe("Factory ", () => {
     await newTokenT.bribe(trg.address, ethers.utils.parseEther("1"));
 
     expect(await newTokenT.points()).to.not.equal(0);
-    expect(await newTokenT.points()).to.equal("1781363205011812259661813");
+    expect(await newTokenT.points()).to.equal("193890945448926412162674");
   });
 
   it("Testing for first three winners", async function () {
     // T token
     const pathWT = [weth.address, newTokenT.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -608,15 +701,15 @@ describe("Factory ", () => {
     );
 
     const pathTW = [newTokenT.address, weth.address];
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("500"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("50"));
 
     let amountOutT =
       0.95 *
-      (await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathTW))[1];
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathTW))[1];
     amountOutT = Math.round(amountOutT);
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("50"),
       amountOutT,
       pathTW,
       owner.address,
@@ -715,11 +808,11 @@ describe("Factory ", () => {
     const userReward = await newTokenT.pendingRewards(owner.address);
 
     expect(userReward).to.not.equal(0);
-    expect(userReward).to.equal(15645627141469);
+    expect(userReward).to.equal(1417164728113);
 
     expect(await newTokenT.balanceOf(owner.address)).to.not.equal(0);
     expect(await newTokenT.balanceOf(owner.address)).to.equal(
-      "370346458124943166318"
+      "44767171302117884690"
     );
 
     const deadReward = await newTokenT.pendingRewards(
@@ -734,12 +827,12 @@ describe("Factory ", () => {
 
     expect(await weth.balanceOf(owner.address)).to.not.equal(0);
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "80726196441258580728"
+      "89699524594698521543"
     );
 
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("10"));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("100"),
+      ethers.utils.parseEther("10"),
       0,
       pathTW,
       owner.address,
@@ -748,7 +841,7 @@ describe("Factory ", () => {
 
     expect(await weth.balanceOf(owner.address)).to.not.equal(0);
     expect(await weth.balanceOf(owner.address)).to.equal(
-      "80726298919943995096"
+      "89699534245637110937"
     );
 
     await network.provider.send("evm_increaseTime", [33 * 86400]);
@@ -764,16 +857,16 @@ describe("Factory ", () => {
     const userReward2 = await newTokenT.pendingRewards(owner.address);
 
     expect(userReward2).to.not.equal(0);
-    expect(userReward2).to.equal(16615723071817);
+    expect(userReward2).to.equal(1509374102988);
 
     expect(await newTokenT.balanceOf(owner.address)).to.not.equal(0);
     expect(await newTokenT.balanceOf(owner.address)).to.equal(
-      "270346458124943166318"
+      "34767171302117884690"
     );
 
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("10"));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("100"),
+      ethers.utils.parseEther("10"),
       0,
       pathTW,
       owner.address,
@@ -792,13 +885,13 @@ describe("Factory ", () => {
 
     expect(await newTokenT.balanceOf(owner.address)).to.not.equal(0);
     expect(await newTokenT.balanceOf(owner.address)).to.equal(
-      "170346458124943166318"
+      "24767171302117884690"
     );
 
     const userReward3 = await newTokenT.pendingRewards(owner.address);
 
     expect(userReward3).to.not.equal(0);
-    expect(userReward3).to.equal(17504473799438);
+    expect(userReward3).to.equal(1597760876225);
 
     expect(winner1).to.equal(newTokenT.address);
     expect(winner2).to.equal(newTokenT.address);
@@ -855,7 +948,6 @@ describe("Factory ", () => {
     await strg.deposit(100);
 
     const pathWT = [weth.address, newTokenT.address];
-
     await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
 
     expect(await newTokenT.balanceOf(owner.address)).to.equal(0);
@@ -985,11 +1077,10 @@ describe("Factory ", () => {
   it("Testing for check upkeep and perform upkeep", async function () {
     // T token
     const pathWT = [weth.address, newTokenT.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -997,15 +1088,15 @@ describe("Factory ", () => {
     );
 
     const pathTW = [newTokenT.address, weth.address];
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("500"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("50"));
 
     let amountOutT =
       0.95 *
-      (await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathTW))[1];
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathTW))[1];
     amountOutT = Math.round(amountOutT);
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("50"),
       amountOutT,
       pathTW,
       owner.address,
@@ -1092,9 +1183,9 @@ describe("Factory ", () => {
     let winner1 = await factory.previousWinner();
     let loser1 = await factory.previousLoser();
 
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("10"));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("100"),
+      ethers.utils.parseEther("10"),
       0,
       pathTW,
       owner.address,
@@ -1109,9 +1200,9 @@ describe("Factory ", () => {
     let winner2 = await factory.previousWinner();
     let loser2 = await factory.previousLoser();
 
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("10"));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("100"),
+      ethers.utils.parseEther("10"),
       0,
       pathTW,
       owner.address,
@@ -1138,11 +1229,10 @@ describe("Factory ", () => {
   it("Testing for check upkeep ", async function () {
     // T token
     const pathWT = [weth.address, newTokenT.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -1150,15 +1240,15 @@ describe("Factory ", () => {
     );
 
     const pathTW = [newTokenT.address, weth.address];
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("500"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("50"));
 
     let amountOutT =
       0.95 *
-      (await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathTW))[1];
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathTW))[1];
     amountOutT = Math.round(amountOutT);
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("50"),
       amountOutT,
       pathTW,
       owner.address,
@@ -1239,32 +1329,31 @@ describe("Factory ", () => {
 
     await network.provider.send("evm_increaseTime", [31 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(false);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
     await network.provider.send("evm_increaseTime", [86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
 
     await network.provider.send("evm_increaseTime", [32 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(false);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
     await network.provider.send("evm_increaseTime", [86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
 
     await network.provider.send("evm_increaseTime", [33 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(false);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
     await network.provider.send("evm_increaseTime", [86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
 
     await network.provider.send("evm_increaseTime", [100 * 86400]);
     await network.provider.send("evm_mine");
 
-    console.log('new token deployment');
     // Tokens deployment
     await weth.transfer(factory.address, ethers.utils.parseEther("0.03"));
 
@@ -1301,15 +1390,13 @@ describe("Factory ", () => {
     const newTokenGAddress = await factory.gameTokens(5);
     let newTokenG = await ethers.getContractAt("THERUGGAME", newTokenGAddress);
 
-    console.log('new token deployment completed')
-    //buy sell
+    // buy sell
     // R token
     const pathWR = [weth.address, newTokenR.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWR,
       owner.address,
@@ -1317,15 +1404,15 @@ describe("Factory ", () => {
     );
 
     const pathRW = [newTokenR.address, weth.address];
-    await newTokenR.approve(routerU.address, ethers.utils.parseEther("500"));
+    await newTokenR.approve(routerU.address, ethers.utils.parseEther("50"));
 
     let amountOutR =
       0.95 *
-      (await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathRW))[1];
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathRW))[1];
     amountOutR = Math.round(amountOutR);
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("50"),
       amountOutR,
       pathRW,
       owner.address,
@@ -1366,6 +1453,7 @@ describe("Factory ", () => {
       owner.address,
       1e12
     );
+
     // G token
     const pathWG = [weth.address, newTokenG.address];
     await weth.approve(routerU.address, 1e10);
@@ -1402,34 +1490,28 @@ describe("Factory ", () => {
       1e12
     );
 
-    console.log('buy sell completed')
-    await factory.rawFulfillRandomWords(1, [37, 38,39]);
+    await factory.rawFulfillRandomWords(1, [37, 38, 39]);
 
     await network.provider.send("evm_increaseTime", [38 * 86400]);
     await network.provider.send("evm_mine");
-    console.log('checkupkeep ', await factory.checkUpkeep(0x00));
     await factory.performUpkeep(0x00);
 
     await network.provider.send("evm_increaseTime", [39 * 86400]);
     await network.provider.send("evm_mine");
-    console.log('checkupkeep ', await factory.checkUpkeep(0x00));
     await factory.performUpkeep(0x00);
 
     await network.provider.send("evm_increaseTime", [40 * 86400]);
     await network.provider.send("evm_mine");
-    console.log('checkupkeep ', await factory.checkUpkeep(0x00));
     await factory.performUpkeep(0x00);
-
   });
 
   it("Testing for create token while previous set of tokens are rugged", async function () {
     // T token
     const pathWT = [weth.address, newTokenT.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -1437,15 +1519,15 @@ describe("Factory ", () => {
     );
 
     const pathTW = [newTokenT.address, weth.address];
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("500"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("50"));
 
     let amountOutT =
       0.95 *
-      (await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathTW))[1];
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathTW))[1];
     amountOutT = Math.round(amountOutT);
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("50"),
       amountOutT,
       pathTW,
       owner.address,
@@ -1524,57 +1606,84 @@ describe("Factory ", () => {
       1e12
     );
 
-    await expect(factory.createToken("S", "S", ethers.utils.parseEther("10000"),
-    ethers.utils.parseEther("0.01"))).to.be.revertedWithCustomError(factory, 'InvalidTime');
+    await expect(
+      factory.createToken(
+        "S",
+        "S",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
 
     await network.provider.send("evm_increaseTime", [31 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(false);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
     await network.provider.send("evm_increaseTime", [86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
 
-    await expect(factory.createToken("R", "R", ethers.utils.parseEther("10000"),
-      ethers.utils.parseEther("0.01"))).to.be.revertedWithCustomError(factory, 'InvalidTime');
+    await expect(
+      factory.createToken(
+        "R",
+        "R",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
 
-    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(factory, 'InvalidTime');
+    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(
+      factory,
+      "InvalidTime"
+    );
 
     await network.provider.send("evm_increaseTime", [32 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(false);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
     await network.provider.send("evm_increaseTime", [86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
 
-    await expect(factory.createToken("U", "U", ethers.utils.parseEther("10000"),
-      ethers.utils.parseEther("0.01"))).to.be.revertedWithCustomError(factory, 'InvalidTime');
-    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(factory, 'InvalidTime');
+    await expect(
+      factory.createToken(
+        "U",
+        "U",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(
+      factory,
+      "InvalidTime"
+    );
 
     await network.provider.send("evm_increaseTime", [33 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(false);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
     await network.provider.send("evm_increaseTime", [86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
 
     await weth.transfer(factory.address, ethers.utils.parseEther("0.03"));
 
     // R token
-    await factory.createToken("R", "R", ethers.utils.parseEther("10000"),
-      ethers.utils.parseEther("0.01"));
+    await factory.createToken(
+      "R",
+      "R",
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("0.01")
+    );
     const newTokenRAddress = await factory.gameTokens(3);
     let newTokenR = await ethers.getContractAt("THERUGGAME", newTokenRAddress);
 
     // R token
     const pathWR = [weth.address, newTokenR.address];
-
-    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWR,
       owner.address,
@@ -1582,15 +1691,15 @@ describe("Factory ", () => {
     );
 
     const pathRW = [newTokenR.address, weth.address];
-    await newTokenR.approve(routerU.address, ethers.utils.parseEther("500"));
+    await newTokenR.approve(routerU.address, ethers.utils.parseEther("50"));
 
     let amountOutR =
       0.95 *
-      (await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathRW))[1];
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathRW))[1];
     amountOutR = Math.round(amountOutR);
 
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("50"),
       amountOutR,
       pathRW,
       owner.address,
@@ -1601,14 +1710,534 @@ describe("Factory ", () => {
       100000,
       3,
       1,
-      '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+      "0x514910771AF9Ca656af840dff83E8264EcF986CA",
       owner.address
     );
     await factory.rawFulfillRandomWords(1, [34]);
 
     await network.provider.send("evm_increaseTime", [35 * 86400]);
     await network.provider.send("evm_mine");
-    expect((await factory.checkUpkeep('0x00'))[0]).to.equal(true);
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
     await factory.performUpkeep(0x00);
+  });
+
+  it("Testing for create token after rawFullfilRandomWords is Called ", async function () {
+    // T token
+    const pathWT = [weth.address, newTokenT.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.0001"),
+      0,
+      pathWT,
+      owner.address,
+      1e12
+    );
+
+    const pathTW = [newTokenT.address, weth.address];
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("50"));
+
+    let amountOutT =
+      0.95 *
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathTW))[1];
+    amountOutT = Math.round(amountOutT);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("50"),
+      amountOutT,
+      pathTW,
+      owner.address,
+      1e12
+    );
+
+    // H token
+    const pathWH = [weth.address, newTokenH.address];
+    await weth.approve(routerU.address, 1e10);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      4000,
+      0,
+      pathWH,
+      owner.address,
+      1e12
+    );
+
+    const pathHW = [newTokenH.address, weth.address];
+    await newTokenH.approve(
+      routerU.address,
+      await newTokenH.balanceOf(owner.address)
+    );
+
+    let amountOutH =
+      0.95 *
+      (
+        await routerU.getAmountsOut(
+          await newTokenH.balanceOf(owner.address),
+          pathHW
+        )
+      )[1];
+    amountOutH = Math.round(amountOutH);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      await newTokenH.balanceOf(owner.address),
+      amountOutH,
+      pathHW,
+      owner.address,
+      1e12
+    );
+
+    // E token
+    const pathWE = [weth.address, newTokenE.address];
+    await weth.approve(routerU.address, 1e10);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      3000,
+      0,
+      pathWE,
+      owner.address,
+      1e12
+    );
+
+    const pathEW = [newTokenE.address, weth.address];
+    await newTokenE.approve(
+      routerU.address,
+      await newTokenE.balanceOf(owner.address)
+    );
+
+    let amountOutE =
+      0.95 *
+      (
+        await routerU.getAmountsOut(
+          await newTokenE.balanceOf(owner.address),
+          pathHW
+        )
+      )[1];
+    amountOutE = Math.round(amountOutE);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      await newTokenE.balanceOf(owner.address),
+      amountOutE,
+      pathEW,
+      owner.address,
+      1e12
+    );
+
+    await expect(
+      factory.createToken(
+        "S",
+        "S",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+
+    await network.provider.send("evm_increaseTime", [31 * 86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+
+    await expect(
+      factory.createToken(
+        "R",
+        "R",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+
+    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(
+      factory,
+      "InvalidTime"
+    );
+
+    await network.provider.send("evm_increaseTime", [32 * 86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+
+    await expect(
+      factory.createToken(
+        "U",
+        "U",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(
+      factory,
+      "InvalidTime"
+    );
+
+    await network.provider.send("evm_increaseTime", [33 * 86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+
+    await weth.transfer(factory.address, ethers.utils.parseEther("0.03"));
+
+    // R token
+    await factory.createToken(
+      "R",
+      "R",
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("0.01")
+    );
+    const newTokenRAddress = await factory.gameTokens(3);
+    let newTokenR = await ethers.getContractAt("THERUGGAME", newTokenRAddress);
+
+    // R token
+    const pathWR = [weth.address, newTokenR.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.0001"),
+      0,
+      pathWR,
+      owner.address,
+      1e12
+    );
+
+    const pathRW = [newTokenR.address, weth.address];
+    await newTokenR.approve(routerU.address, ethers.utils.parseEther("50"));
+
+    let amountOutR =
+      0.95 *
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathRW))[1];
+    amountOutR = Math.round(amountOutR);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("50"),
+      amountOutR,
+      pathRW,
+      owner.address,
+      1e12
+    );
+
+    await factory.updateVrfConfiguration(
+      100000,
+      3,
+      1,
+      "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+      owner.address
+    );
+    await factory.rawFulfillRandomWords(1, [34]);
+    await expect(
+      factory.createToken(
+        "M",
+        "M",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+    await network.provider.send("evm_increaseTime", [34 * 86400]);
+    await network.provider.send("evm_mine");
+    await expect(
+      factory.createToken(
+        "N",
+        "N",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+  });
+
+  it("Testing for create token after gameEndTime ", async function () {
+    // T token
+    const pathWT = [weth.address, newTokenT.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.0001"),
+      0,
+      pathWT,
+      owner.address,
+      1e12
+    );
+
+    const pathTW = [newTokenT.address, weth.address];
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("50"));
+
+    let amountOutT =
+      0.95 *
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathTW))[1];
+    amountOutT = Math.round(amountOutT);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("50"),
+      amountOutT,
+      pathTW,
+      owner.address,
+      1e12
+    );
+
+    // H token
+    const pathWH = [weth.address, newTokenH.address];
+    await weth.approve(routerU.address, 1e10);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      4000,
+      0,
+      pathWH,
+      owner.address,
+      1e12
+    );
+
+    const pathHW = [newTokenH.address, weth.address];
+    await newTokenH.approve(
+      routerU.address,
+      await newTokenH.balanceOf(owner.address)
+    );
+
+    let amountOutH =
+      0.95 *
+      (
+        await routerU.getAmountsOut(
+          await newTokenH.balanceOf(owner.address),
+          pathHW
+        )
+      )[1];
+    amountOutH = Math.round(amountOutH);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      await newTokenH.balanceOf(owner.address),
+      amountOutH,
+      pathHW,
+      owner.address,
+      1e12
+    );
+
+    // E token
+    const pathWE = [weth.address, newTokenE.address];
+    await weth.approve(routerU.address, 1e10);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      3000,
+      0,
+      pathWE,
+      owner.address,
+      1e12
+    );
+
+    const pathEW = [newTokenE.address, weth.address];
+    await newTokenE.approve(
+      routerU.address,
+      await newTokenE.balanceOf(owner.address)
+    );
+
+    let amountOutE =
+      0.95 *
+      (
+        await routerU.getAmountsOut(
+          await newTokenE.balanceOf(owner.address),
+          pathHW
+        )
+      )[1];
+    amountOutE = Math.round(amountOutE);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      await newTokenE.balanceOf(owner.address),
+      amountOutE,
+      pathEW,
+      owner.address,
+      1e12
+    );
+
+    await expect(
+      factory.createToken(
+        "S",
+        "S",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+
+    await network.provider.send("evm_increaseTime", [31 * 86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+
+    await expect(
+      factory.createToken(
+        "R",
+        "R",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+
+    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(
+      factory,
+      "InvalidTime"
+    );
+
+    await network.provider.send("evm_increaseTime", [32 * 86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+
+    await expect(
+      factory.createToken(
+        "U",
+        "U",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+    await expect(factory.requestRugDays()).to.be.revertedWithCustomError(
+      factory,
+      "InvalidTime"
+    );
+
+    await network.provider.send("evm_increaseTime", [33 * 86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(false);
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+
+    await weth.transfer(factory.address, ethers.utils.parseEther("0.03"));
+
+    // R token
+    await factory.createToken(
+      "R",
+      "R",
+      ethers.utils.parseEther("10000"),
+      ethers.utils.parseEther("0.01")
+    );
+    const newTokenRAddress = await factory.gameTokens(3);
+    let newTokenR = await ethers.getContractAt("THERUGGAME", newTokenRAddress);
+
+    // R token
+    const pathWR = [weth.address, newTokenR.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.0001"));
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.0001"),
+      0,
+      pathWR,
+      owner.address,
+      1e12
+    );
+
+    const pathRW = [newTokenR.address, weth.address];
+    await newTokenR.approve(routerU.address, ethers.utils.parseEther("50"));
+
+    let amountOutR =
+      0.95 *
+      (await routerU.getAmountsOut(ethers.utils.parseEther("50"), pathRW))[1];
+    amountOutR = Math.round(amountOutR);
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("50"),
+      amountOutR,
+      pathRW,
+      owner.address,
+      1e12
+    );
+
+    await factory.updateVrfConfiguration(
+      100000,
+      3,
+      1,
+      "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+      owner.address
+    );
+    await factory.rawFulfillRandomWords(1, [34]);
+
+    await expect(
+      factory.createToken(
+        "M",
+        "M",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+
+    await network.provider.send("evm_increaseTime", [34 * 86400]);
+    await network.provider.send("evm_mine");
+
+    await expect(
+      factory.createToken(
+        "N",
+        "N",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+
+    await network.provider.send("evm_increaseTime", [86400]);
+    await network.provider.send("evm_mine");
+
+    await expect(
+      factory.createToken(
+        "O",
+        "O",
+        ethers.utils.parseEther("10000"),
+        ethers.utils.parseEther("0.01")
+      )
+    ).to.be.revertedWithCustomError(factory, "InvalidTime");
+    expect((await factory.checkUpkeep("0x00"))[0]).to.equal(true);
+    await factory.performUpkeep(0x00);
+  });
+
+  it("Should not transfer more than 1 percent of the total supply ", async function () {
+    const pathWT = [weth.address, newTokenT.address];
+    await weth.approve(routerU.address, ethers.utils.parseEther("0.001"));
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.0001"),
+      0,
+      pathWT,
+      owner.address,
+      1e12
+    );
+
+    await newTokenT.transfer(
+      addr1.address,
+      await newTokenT.balanceOf(owner.address)
+    );
+
+    await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      ethers.utils.parseEther("0.00005"),
+      0,
+      pathWT,
+      owner.address,
+      1e12
+    );
+
+    await expect(
+      newTokenT.transfer(
+        addr1.address,
+        await newTokenT.balanceOf(owner.address)
+      )
+    ).to.be.revertedWithCustomError(newTokenT, "TransferLimitExceeded");
+
+    await expect(
+      newTokenT.transfer(addr1.address, ethers.utils.parseEther("6"))
+    ).to.be.revertedWithCustomError(newTokenT, "TransferLimitExceeded");
+
+    await expect(
+      newTokenT.transfer(addr1.address, ethers.utils.parseEther("5"))
+    ).to.not.be.revertedWithCustomError(newTokenT, "TransferLimitExceeded");
   });
 });

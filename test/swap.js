@@ -145,10 +145,10 @@ describe("Factory", () => {
     );
     console.log(
       "amount out pathWT",
-      await routerU.getAmountsOut(ethers.utils.parseEther("0.001"), pathWT)
+      await routerU.getAmountsOut(ethers.utils.parseEther("0.0001"), pathWT)
     );
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("0.001"),
+      ethers.utils.parseEther("0.0001"),
       0,
       pathWT,
       owner.address,
@@ -165,10 +165,10 @@ describe("Factory", () => {
     );
     console.log(
       "amount out pathTW",
-      await routerU.getAmountsOut(ethers.utils.parseEther("500"), pathTW)
+      await routerU.getAmountsOut(ethers.utils.parseEther("80"), pathTW)
     );
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("500"),
+      ethers.utils.parseEther("80"),
       0,
       pathTW,
       owner.address,
@@ -346,9 +346,9 @@ describe("Factory", () => {
 
     console.log("\n\n\nWinner2-------------------------------------");
     console.log("owner bal before", await weth.balanceOf(owner.address));
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("10"));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("100"),
+      ethers.utils.parseEther("10"),
       0,
       pathTW,
       owner.address,
@@ -377,9 +377,9 @@ describe("Factory", () => {
     console.log("user reward after claim is", userRewardAfter2);
 
     console.log("\n\n\nWinner3-------------------------------------");
-    await newTokenT.approve(routerU.address, ethers.utils.parseEther("100"));
+    await newTokenT.approve(routerU.address, ethers.utils.parseEther("4"));
     await routerU.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-      ethers.utils.parseEther("100"),
+      ethers.utils.parseEther("4"),
       0,
       pathTW,
       owner.address,
