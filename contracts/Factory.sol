@@ -102,9 +102,9 @@ contract Factory is
         updateVrfConfiguration(
             100000,
             3,
-            3,
+            10,
             0x514910771AF9Ca656af840dff83E8264EcF986CA,
-            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+            0x5A861794B927983406fCE1D062e00b9368d97Df6
         );
     }
 
