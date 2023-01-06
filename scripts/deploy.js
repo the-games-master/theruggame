@@ -7,29 +7,31 @@
 const hre = require("hardhat");
 
 async function main() {
+  const trg = "0x0000000000000000000000000000000000000TRG"
+  const strg = "0x000000000000000000000000000000000000sTRG"
   const dCultAddress = "0x2d77B594B9BBaED03221F7c63Af8C4307432daF1";
   const cultAddress = "0xf0f9D895aCa5c8678f706FB8216fa22957685A13";
   const taxBurn = 100;
-  const taxCult = 100;
+  const taxCult = 200;
   const taxReward = 100;
-  const taxTrg = 100;
+  const taxTrg = 0;
 
-  const TRG = await ethers.getContractFactory("TheRugGame");
-  const trg = await TRG.deploy();
-  await trg.deployed();
-  console.log("trg", trg.address);
+  // const TRG = await ethers.getContractFactory("TheRugGame");
+  // const trg = await TRG.deploy();
+  // await trg.deployed();
+  // console.log("trg", trg.address);
 
-  const sTRG = await ethers.getContractFactory("STRG");
-  const strg = await sTRG.deploy(trg.address);
-  await strg.deployed();
-  console.log("strg", strg.address);
+  // const sTRG = await ethers.getContractFactory("STRG");
+  // const strg = await sTRG.deploy(trg.address);
+  // await strg.deployed();
+  // console.log("strg", strg.address);
 
   const Factory = await ethers.getContractFactory("Factory");
   const factory = await upgrades.deployProxy(
     Factory,
     [
-      trg.address,
-      strg.address,
+      trg,
+      strg,
       cultAddress,
       dCultAddress,
       taxBurn,
